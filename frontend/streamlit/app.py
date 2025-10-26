@@ -245,14 +245,37 @@ def generate_sample_data():
     }
 
 def format_time_duration(minutes: float) -> str:
-    """Format duration in minutes to MM:SS format."""
+    """Format duration in minutes to readable format (e.g., "1 min 23 secs" or "1 hr 3 mins 45 secs")."""
     if minutes <= 0:
-        return "0:00"
+        return "0 secs"
     
     total_seconds = int(minutes * 60)
-    mins = total_seconds // 60
+    
+    hours = total_seconds // 3600
+    mins = (total_seconds % 3600) // 60
     secs = total_seconds % 60
-    return f"{mins}:{secs:02d}"
+    
+    parts = []
+    if hours > 0:
+        parts.append(f"{hours} hr")
+        if hours > 1:
+            parts[-1] = parts[-1] + "s"
+    
+    if mins > 0:
+        parts.append(f"{mins} min")
+        if mins > 1:
+            parts[-1] = parts[-1] + "s"
+    
+    if secs > 0:
+        parts.append(f"{secs} sec")
+        if secs > 1:
+            parts[-1] = parts[-1] + "s"
+    
+    if total_seconds < 60:
+        # For very short durations, always show seconds
+        return f"{secs} sec{'s' if secs != 1 else ''}"
+    
+    return " ".join(parts)
 
 def format_metric_value(value: Any, metric_name: str) -> str:
     """Format metric values based on type."""
@@ -264,7 +287,7 @@ def format_metric_value(value: Any, metric_name: str) -> str:
     if metric_name in integer_metrics:
         return str(int(np.ceil(value)) if isinstance(value, (int, float)) else value)
     
-    # Format duration metrics as MM:SS
+    # Format duration metrics as readable text
     duration_metrics = ['warm_up_length', 'cool_down_length', 'total_session_duration', 
                        'total_playing_time', 'longest_rally_length', 'rest_between_games']
     if metric_name in duration_metrics:
@@ -272,6 +295,26 @@ def format_metric_value(value: Any, metric_name: str) -> str:
     
     # Default formatting
     return str(value)
+
+def format_confidence(confidence: float) -> str:
+    """Format confidence as percentage."""
+    return f"{int(confidence * 100)}%"
+
+def get_data_sources_for_metric(metric_name: str) -> str:
+    """Get the data sources used for a metric."""
+    data_sources_map = {
+        'warm_up_length': 'Heart rate',
+        'cool_down_length': 'Heart rate',
+        'number_of_games': 'Heart rate',
+        'number_of_rallies': 'Heart rate',
+        'total_session_duration': 'Timestamp',
+        'total_playing_time': 'Heart rate',
+        'longest_rally_length': 'Heart rate',
+        'rallies_per_game': 'Heart rate',
+        'rest_between_games': 'Heart rate',
+        'shots_detected': 'Accelerometer (X, Y, Z axes)'
+    }
+    return data_sources_map.get(metric_name, 'Multiple sensors')
 
 def display_analysis_results(analysis_data, raw_data):
     """Display the analysis results in the Streamlit interface."""
@@ -356,11 +399,18 @@ def display_analysis_results(analysis_data, raw_data):
     # Visualizations
     st.header("📈 Performance Visualizations")
     
+    # Timeline View
+    st.subheader("Session Timeline")
+    fig_timeline = create_timeline_view(raw_data, analysis_data)
+    st.plotly_chart(fig_timeline, use_container_width=True)
+    
     # Heart Rate Over Time
+    st.subheader("Heart Rate Over Time")
     fig_hr = create_heart_rate_chart(raw_data, analysis_data)
     st.plotly_chart(fig_hr, use_container_width=True)
     
     # Metric Confidence Chart
+    st.subheader("Metric Confidence")
     fig_confidence = create_confidence_chart(analysis_data['metrics'])
     st.plotly_chart(fig_confidence, use_container_width=True)
     
@@ -371,14 +421,21 @@ def display_analysis_results(analysis_data, raw_data):
         # Show all metric results
         for metric_name, result in analysis_data['metrics'].items():
             st.subheader(f"{metric_name.replace('_', ' ').title()}")
-            st.write(f"**Value:** {format_metric_value(result.value, metric_name)}")
-            st.write(f"**Confidence:** {result.confidence:.2f}")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.write(f"**Value:** {format_metric_value(result.value, metric_name)}")
+            with col2:
+                st.write(f"**Confidence:** {format_confidence(result.confidence)}")
+            with col3:
+                st.write(f"**Data Source:** {get_data_sources_for_metric(metric_name)}")
+            
             st.write(f"**Algorithm:** {result.metadata.get('algorithm', 'N/A')}")
             
             if result.metadata:
                 st.write("**Metadata:**")
                 for key, value in result.metadata.items():
-                    if key != 'algorithm':
+                    if key not in ['algorithm', 'error']:
                         st.write(f"• {key}: {value}")
             
             st.write("---")
@@ -462,6 +519,77 @@ def create_confidence_chart(metrics):
         yaxis_title="Confidence (0-1)",
         height=400,
         xaxis_tickangle=-45
+    )
+    
+    return fig
+
+def create_timeline_view(raw_data, analysis_data):
+    """Create timeline view with rectangular blocks for warm-up, games, rests, and cool-down."""
+    fig = go.Figure()
+    
+    # Get timeline data
+    metrics = analysis_data['metrics']
+    timeline_blocks = []
+    
+    # Warm-up
+    warmup_result = metrics.get('warm_up_length')
+    if warmup_result and warmup_result.data_points and len(warmup_result.data_points) > 0:
+        start_idx, end_idx = warmup_result.data_points[0]
+        start_time = raw_data['timestamp'].iloc[start_idx] if start_idx < len(raw_data) else raw_data['timestamp'].iloc[0]
+        end_time = raw_data['timestamp'].iloc[end_idx] if end_idx < len(raw_data) else raw_data['timestamp'].iloc[-1]
+        duration = format_time_duration(warmup_result.value)
+        timeline_blocks.append({
+            'start': start_time,
+            'end': end_time,
+            'label': f'Warm-up ({duration})',
+            'color': 'lightblue'
+        })
+    
+    # Cool-down
+    cooldown_result = metrics.get('cool_down_length')
+    if cooldown_result and cooldown_result.data_points and len(cooldown_result.data_points) > 0:
+        start_idx, end_idx = cooldown_result.data_points[0]
+        start_time = raw_data['timestamp'].iloc[start_idx] if start_idx < len(raw_data) else raw_data['timestamp'].iloc[0]
+        end_time = raw_data['timestamp'].iloc[end_idx] if end_idx < len(raw_data) else raw_data['timestamp'].iloc[-1]
+        duration = format_time_duration(cooldown_result.value)
+        timeline_blocks.append({
+            'start': start_time,
+            'end': end_time,
+            'label': f'Cool-down ({duration})',
+            'color': 'lightgreen'
+        })
+    
+    # Create timeline visualization
+    if timeline_blocks:
+        # Add blocks to timeline
+        for block in timeline_blocks:
+            fig.add_vrect(
+                x0=block['start'],
+                x1=block['end'],
+                fillcolor=block['color'],
+                opacity=0.3,
+                annotation_text=block['label'],
+                annotation_position="top"
+            )
+    
+    # Add session duration line
+    fig.add_vline(
+        x=raw_data['timestamp'].iloc[0],
+        line_dash="dash",
+        line_color="gray",
+        annotation_text="Session Start"
+    )
+    fig.add_vline(
+        x=raw_data['timestamp'].iloc[-1],
+        line_dash="dash",
+        line_color="gray",
+        annotation_text="Session End"
+    )
+    
+    fig.update_layout(
+        title="Session Timeline",
+        xaxis_title="Time",
+        height=200
     )
     
     return fig
