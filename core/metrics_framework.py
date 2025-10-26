@@ -150,21 +150,21 @@ class WarmUpDetector(BaseMetricDetector):
         
         # Find first point where HR crosses threshold
         warmup_end_idx = None
-        for i in range(min(100, max_search_points)):  # Check first points
+        for i in range(min(600, max_search_points)):  # Check first 10 minutes
             if hr_data.iloc[i] >= threshold_hr:
                 warmup_end_idx = i
                 break
         
-        # If no threshold crossed, use 10% of session as default
+        # If no threshold crossed, use fixed 5 minutes as default (reasonable warm-up)
         if warmup_end_idx is None:
-            warmup_end_idx = min(int(len(hr_data) * 0.1), 600)  # Max 10 minutes
+            warmup_end_idx = 300  # 5 minutes default
         
-        # Ensure warm-up is reasonable (3-10 minutes)
+        # Ensure warm-up is reasonable (3-8 minutes)
         if warmup_end_idx < 180:  # Less than 3 minutes
             warmup_end_idx = 180  # Minimum 3 minutes
         
-        if warmup_end_idx > 600:  # More than 10 minutes
-            warmup_end_idx = 600  # Maximum 10 minutes
+        if warmup_end_idx > 480:  # More than 8 minutes
+            warmup_end_idx = 480  # Maximum 8 minutes
         
         warmup_start_idx = 0
         extended_start_int = warmup_start_idx
