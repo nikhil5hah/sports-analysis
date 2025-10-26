@@ -11,7 +11,8 @@ from typing import Dict, List, Any, Optional
 from .metrics_framework import MetricsFramework, MetricResult, MetricType
 from sports.squash.detectors.additional_metrics import (
     SessionDurationDetector, PlayingTimeDetector, LongestRallyDetector,
-    RalliesPerGameDetector, RestBetweenGamesDetector, AccelerometerShotDetector
+    RalliesPerGameDetector, RestBetweenGamesDetector, AccelerometerShotDetector,
+    RestTimeDetector, AvgPlayingHeartRateDetector, AvgRestHeartRateDetector
 )
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,9 @@ class ModularAnalysisEngine:
         self.framework.register_detector(RalliesPerGameDetector())
         self.framework.register_detector(RestBetweenGamesDetector())
         self.framework.register_detector(AccelerometerShotDetector())
+        self.framework.register_detector(RestTimeDetector())
+        self.framework.register_detector(AvgPlayingHeartRateDetector())
+        self.framework.register_detector(AvgRestHeartRateDetector())
         
         logger.info(f"Registered {len(self.framework.get_available_metrics())} metric detectors")
     

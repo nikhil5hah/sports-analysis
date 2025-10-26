@@ -15,6 +15,62 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+def calculate_hr_zones(df: pd.DataFrame, max_hr: Optional[float] = None) -> Tuple[pd.DataFrame, float]:
+    """
+    Calculate HR zones for all data points.
+    
+    Zones:
+    - Zone 0: Below 50% max HR (out of zones)
+    - Zone 1: 50-60% max HR (Recovery/Rest)
+    - Zone 2: 60-70% max HR (Active Recovery)
+    - Zone 3: 70-80% max HR (Aerobic/Moderate)
+    - Zone 4: 80-90% max HR (Anaerobic/Hard)
+    - Zone 5: 90-100% max HR (Maximum)
+    
+    Returns:
+        DataFrame with 'hr_zone' column added
+        Estimated or provided max_hr
+    """
+    if 'heart_rate' not in df.columns:
+        logger.error("heart_rate column required for zone calculation")
+        return df, max_hr or 200
+    
+    hr_data = df['heart_rate'].dropna()
+    
+    if max_hr is None:
+        # Estimate max HR from session data (observed max + 5% buffer)
+        if len(hr_data) > 0:
+            observed_max = hr_data.max()
+            max_hr = observed_max * 1.05  # Add 5% buffer
+            logger.info(f"Estimated max HR: {max_hr:.1f} (from observed max: {observed_max:.1f})")
+        else:
+            max_hr = 200  # Default fallback
+    
+    def assign_zone(hr: float) -> int:
+        """Assign HR zone based on percentage of max HR."""
+        if pd.isna(hr):
+            return 0
+        
+        pct = (hr / max_hr) * 100
+        
+        if pct < 50:
+            return 0  # Below zones
+        elif pct < 60:
+            return 1
+        elif pct < 70:
+            return 2
+        elif pct < 80:
+            return 3
+        elif pct < 90:
+            return 4
+        else:
+            return 5
+    
+    df = df.copy()
+    df['hr_zone'] = df['heart_rate'].apply(assign_zone)
+    
+    return df, max_hr
+
 class MetricType(Enum):
     """Types of metrics that can be detected."""
     TEMPORAL = "temporal"  # Time-based metrics (duration, timing)
@@ -22,6 +78,7 @@ class MetricType(Enum):
     INTENSITY = "intensity" # Intensity-based metrics
     MOVEMENT = "movement"   # Movement-based metrics
     COMPOSITE = "composite" # Metrics combining multiple data sources
+    PHYSIOLOGICAL = "physiological"  # Physiological metrics (heart rate, etc.)
 
 @dataclass
 class MetricResult:

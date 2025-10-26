@@ -58,17 +58,17 @@ class SessionDurationDetector(BaseMetricDetector):
         )
 
 class PlayingTimeDetector(BaseMetricDetector):
-    """Detects total playing time (sum of rally durations)."""
+    """Detects total playing time using HR zones (Zone 3, 4, or 5)."""
     
     def __init__(self):
         super().__init__("total_playing_time", MetricType.TEMPORAL)
-        self.algorithm_version = "1.0"
+        self.algorithm_version = "2.0"  # Zone-based approach
     
     def get_required_data_fields(self) -> List[str]:
         return ['heart_rate', 'timestamp']
     
     def detect(self, df: pd.DataFrame, context: Dict[str, Any] = None) -> MetricResult:
-        """Calculate total playing time from rallies."""
+        """Calculate total playing time from HR zones."""
         if not self.validate_data(df):
             return MetricResult(
                 metric_name=self.metric_name,
@@ -77,26 +77,35 @@ class PlayingTimeDetector(BaseMetricDetector):
                 metadata={'error': 'Missing required data fields'}
             )
         
-        # Get rallies from context or detect them
-        rallies = context.get('rallies', []) if context else []
+        # Calculate HR zones
+        from core.metrics_framework import calculate_hr_zones
+        df_with_zones, max_hr = calculate_hr_zones(df)
         
-        if not rallies:
-            # Fallback: detect rallies ourselves
-            from core.metrics_framework import RallyDetector
-            rally_detector = RallyDetector()
-            rally_result = rally_detector.detect(df, context)
-            rallies = rally_result.metadata.get('rallies', [])
-        
-        if not rallies:
+        if 'hr_zone' not in df_with_zones.columns:
             return MetricResult(
                 metric_name=self.metric_name,
                 value=0,
                 confidence=0.0,
-                metadata={'error': 'No rallies detected'}
+                metadata={'error': 'Failed to calculate HR zones'}
             )
         
-        # Sum up rally durations
-        total_playing_time = sum([rally['duration_minutes'] for rally in rallies])
+        # Calculate sampling rate for time conversion
+        if 'time_diff' in df.columns and df['time_diff'].mean() > 0:
+            samples_per_minute = 60.0 / df['time_diff'].mean()
+        else:
+            # Estimate from timestamps
+            time_diffs = (df['timestamp'].diff().dt.total_seconds()).dropna()
+            if len(time_diffs) > 0 and time_diffs.mean() > 0:
+                samples_per_minute = 60.0 / time_diffs.mean()
+            else:
+                samples_per_minute = 1.0
+        
+        # Sum time spent in Zone 3, 4, or 5 (active play)
+        high_zone_points = df_with_zones['hr_zone'].isin([3, 4, 5]).sum()
+        total_playing_time = high_zone_points / samples_per_minute
+        
+        # Calculate zone distribution
+        zone_counts = df_with_zones['hr_zone'].value_counts().to_dict()
         
         confidence = self.get_confidence_score(df, total_playing_time)
         
@@ -105,14 +114,16 @@ class PlayingTimeDetector(BaseMetricDetector):
             value=total_playing_time,
             confidence=confidence,
             metadata={
-                'rally_count': len(rallies),
-                'avg_rally_duration': total_playing_time / len(rallies) if rallies else 0,
-                'algorithm': 'rally_duration_sum'
+                'algorithm': 'hr_zone_based_v2.0',
+                'max_hr_used': max_hr,
+                'zone_distribution': zone_counts,
+                'high_zone_points': high_zone_points,
+                'total_points': len(df_with_zones)
             }
         )
     
     def get_confidence_score(self, df: pd.DataFrame, result: Any) -> float:
-        """Calculate confidence based on rally detection quality."""
+        """Calculate confidence based on playing time ratio."""
         hr_data = df['heart_rate'].dropna()
         completeness = len(hr_data) / len(df)
         
@@ -121,11 +132,15 @@ class PlayingTimeDetector(BaseMetricDetector):
             session_duration = df['cumulative_time'].iloc[-1] / 60 if 'cumulative_time' in df.columns else 0
             if session_duration > 0:
                 playing_ratio = result / session_duration
-                # Reasonable playing ratio is 30-70% of session time
-                ratio_confidence = 1.0 - abs(playing_ratio - 0.5) * 2
-                return min(completeness * max(ratio_confidence, 0.3), 1.0)
+                # Reasonable playing ratio is 20-60% of session time
+                if 0.2 <= playing_ratio <= 0.6:
+                    return completeness
+                else:
+                    # Penalize extreme ratios
+                    ratio_penalty = abs(playing_ratio - 0.4) / 0.4  # Distance from ideal 40%
+                    return completeness * max(0.3, 1.0 - ratio_penalty)
         
-        return completeness * 0.5
+        return completeness * 0.3
 
 class LongestRallyDetector(BaseMetricDetector):
     """Detects the longest rally duration."""
@@ -476,6 +491,229 @@ class AccelerometerShotDetector(BaseMetricDetector):
             return min(completeness * reasonableness, 1.0)
         
         return completeness * 0.5
+
+class RestTimeDetector(BaseMetricDetector):
+    """Detects total rest time using HR zones (Zone 1 or 2, excluding warm-up/cool-down)."""
+    
+    def __init__(self):
+        super().__init__("total_rest_time", MetricType.TEMPORAL)
+        self.algorithm_version = "1.0"
+    
+    def get_required_data_fields(self) -> List[str]:
+        return ['heart_rate', 'timestamp']
+    
+    def detect(self, df: pd.DataFrame, context: Dict[str, Any] = None) -> MetricResult:
+        """Calculate total rest time from HR zones."""
+        if not self.validate_data(df):
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'Missing required data fields'}
+            )
+        
+        # Calculate HR zones
+        from core.metrics_framework import calculate_hr_zones
+        df_with_zones, max_hr = calculate_hr_zones(df)
+        
+        if 'hr_zone' not in df_with_zones.columns:
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'Failed to calculate HR zones'}
+            )
+        
+        # Calculate sampling rate for time conversion
+        if 'time_diff' in df.columns and df['time_diff'].mean() > 0:
+            samples_per_minute = 60.0 / df['time_diff'].mean()
+        else:
+            # Estimate from timestamps
+            time_diffs = (df['timestamp'].diff().dt.total_seconds()).dropna()
+            if len(time_diffs) > 0 and time_diffs.mean() > 0:
+                samples_per_minute = 60.0 / time_diffs.mean()
+            else:
+                samples_per_minute = 1.0
+        
+        # Get warm-up and cool-down data points from context
+        warmup_points = 0
+        cooldown_points = 0
+        
+        # Get warm-up info if available
+        warmup_result = context.get('warmup_result') if context else None
+        if warmup_result and warmup_result.data_points:
+            start_idx, end_idx = warmup_result.data_points[0]
+            warmup_points = end_idx - start_idx
+        
+        # Get cool-down info if available
+        cooldown_result = context.get('cooldown_result') if context else None
+        if cooldown_result and cooldown_result.data_points:
+            start_idx, end_idx = cooldown_result.data_points[0]
+            cooldown_points = end_idx - start_idx
+        
+        # Sum time spent in Zone 1 or 2 (rest periods)
+        low_zone_points = df_with_zones['hr_zone'].isin([1, 2]).sum()
+        
+        # Roughly estimate warm-up/cool-down portion in low zones
+        # This is a simplification - could be improved with more precise tracking
+        warmup_cooldown_low_zone_estimate = (warmup_points + cooldown_points) * 0.5
+        
+        # Calculate actual rest time (excluding warm-up/cool-down portions)
+        actual_rest_points = low_zone_points - warmup_cooldown_low_zone_estimate
+        actual_rest_points = max(0, actual_rest_points)  # Ensure non-negative
+        
+        total_rest_time = actual_rest_points / samples_per_minute
+        
+        confidence = self.get_confidence_score(df, total_rest_time)
+        
+        return MetricResult(
+            metric_name=self.metric_name,
+            value=total_rest_time,
+            confidence=confidence,
+            metadata={
+                'algorithm': 'hr_zone_based_v1.0',
+                'max_hr_used': max_hr,
+                'total_low_zone_points': low_zone_points,
+                'warmup_cooldown_estimate': warmup_cooldown_low_zone_estimate,
+                'actual_rest_points': actual_rest_points
+            }
+        )
+    
+    def get_confidence_score(self, df: pd.DataFrame, result: Any) -> float:
+        """Calculate confidence based on rest time reasonableness."""
+        hr_data = df['heart_rate'].dropna()
+        completeness = len(hr_data) / len(df)
+        
+        if result > 0:
+            # Confidence based on rest time ratio
+            session_duration = df['cumulative_time'].iloc[-1] / 60 if 'cumulative_time' in df.columns else 0
+            if session_duration > 0:
+                rest_ratio = result / session_duration
+                # Reasonable rest ratio is 30-60% of session time
+                if 0.3 <= rest_ratio <= 0.6:
+                    return completeness
+                else:
+                    # Penalize extreme ratios
+                    ratio_penalty = abs(rest_ratio - 0.45) / 0.45  # Distance from ideal 45%
+                    return completeness * max(0.3, 1.0 - ratio_penalty)
+        
+        return completeness * 0.3
+
+class AvgPlayingHeartRateDetector(BaseMetricDetector):
+    """Calculates average heart rate during active play (Zones 3, 4, 5)."""
+    
+    def __init__(self):
+        super().__init__("avg_playing_heart_rate", MetricType.PHYSIOLOGICAL)
+        self.algorithm_version = "1.0"
+    
+    def get_required_data_fields(self) -> List[str]:
+        return ['heart_rate']
+    
+    def detect(self, df: pd.DataFrame, context: Dict[str, Any] = None) -> MetricResult:
+        """Calculate average HR during play."""
+        if not self.validate_data(df):
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'Missing required data fields'}
+            )
+        
+        from core.metrics_framework import calculate_hr_zones
+        df_with_zones, max_hr = calculate_hr_zones(df)
+        
+        if 'hr_zone' not in df_with_zones.columns:
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'Failed to calculate HR zones'}
+            )
+        
+        # Filter to playing zones (3, 4, 5)
+        playing_mask = df_with_zones['hr_zone'].isin([3, 4, 5])
+        playing_hr = df_with_zones.loc[playing_mask, 'heart_rate'].dropna()
+        
+        if len(playing_hr) == 0:
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'No playing zone data'}
+            )
+        
+        avg_playing_hr = playing_hr.mean()
+        confidence = len(playing_hr) / len(df)  # Fraction of session in playing zones
+        
+        return MetricResult(
+            metric_name=self.metric_name,
+            value=round(avg_playing_hr, 1),
+            confidence=confidence,
+            metadata={
+                'algorithm': 'zone_based_v1.0',
+                'max_hr_used': max_hr,
+                'playing_samples': len(playing_hr),
+                'total_samples': len(df)
+            }
+        )
+
+class AvgRestHeartRateDetector(BaseMetricDetector):
+    """Calculates average heart rate during rest periods (Zones 1, 2)."""
+    
+    def __init__(self):
+        super().__init__("avg_rest_heart_rate", MetricType.PHYSIOLOGICAL)
+        self.algorithm_version = "1.0"
+    
+    def get_required_data_fields(self) -> List[str]:
+        return ['heart_rate']
+    
+    def detect(self, df: pd.DataFrame, context: Dict[str, Any] = None) -> MetricResult:
+        """Calculate average HR during rest."""
+        if not self.validate_data(df):
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'Missing required data fields'}
+            )
+        
+        from core.metrics_framework import calculate_hr_zones
+        df_with_zones, max_hr = calculate_hr_zones(df)
+        
+        if 'hr_zone' not in df_with_zones.columns:
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'Failed to calculate HR zones'}
+            )
+        
+        # Filter to rest zones (1, 2)
+        rest_mask = df_with_zones['hr_zone'].isin([1, 2])
+        rest_hr = df_with_zones.loc[rest_mask, 'heart_rate'].dropna()
+        
+        if len(rest_hr) == 0:
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'No rest zone data'}
+            )
+        
+        avg_rest_hr = rest_hr.mean()
+        confidence = len(rest_hr) / len(df)  # Fraction of session in rest zones
+        
+        return MetricResult(
+            metric_name=self.metric_name,
+            value=round(avg_rest_hr, 1),
+            confidence=confidence,
+            metadata={
+                'algorithm': 'zone_based_v1.0',
+                'max_hr_used': max_hr,
+                'rest_samples': len(rest_hr),
+                'total_samples': len(df)
+            }
+        )
 
 if __name__ == "__main__":
     # Test the additional detectors
