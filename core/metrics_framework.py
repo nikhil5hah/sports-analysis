@@ -363,12 +363,16 @@ class GameDetector(BaseMetricDetector):
         # Calculate rest period durations
         rest_durations = []
         for start_idx, end_idx in rest_periods:
+            # Ensure indices are numeric
+            start_int = int(start_idx) if isinstance(start_idx, (int, np.integer)) else int(hr_data.index[start_idx])
+            end_int = int(end_idx) if isinstance(end_idx, (int, np.integer)) else int(hr_data.index[end_idx])
+            
             # Calculate duration using time_diff if available
             if 'time_diff' in df.columns:
-                duration = (end_idx - start_idx) * df['time_diff'].mean() / 60
+                duration = (end_int - start_int) * df['time_diff'].mean() / 60
             else:
                 # Fallback: calculate from timestamps
-                duration = (df['timestamp'].iloc[end_idx] - df['timestamp'].iloc[start_idx]).total_seconds() / 60
+                duration = (df['timestamp'].iloc[end_int] - df['timestamp'].iloc[start_int]).total_seconds() / 60
             rest_durations.append(duration)
         
         # Distinguish game breaks (>2 minutes) from rally breaks (<30 seconds)
@@ -478,7 +482,15 @@ class RallyDetector(BaseMetricDetector):
         for start_idx, end_idx in rally_periods:
             actual_start_idx = hr_data.index[start_idx]
             actual_end_idx = hr_data.index[end_idx-1] if end_idx < len(hr_data) else hr_data.index[-1]
-            rally_duration = (actual_end_idx - actual_start_idx) * df['time_diff'].mean() / 60
+            
+            # Calculate duration - ensure indices are numeric
+            if isinstance(actual_start_idx, (int, np.integer)) and isinstance(actual_end_idx, (int, np.integer)):
+                rally_duration = (actual_end_idx - actual_start_idx) * df['time_diff'].mean() / 60
+            else:
+                # Use index difference for integer indices
+                start_int = int(actual_start_idx)
+                end_int = int(actual_end_idx)
+                rally_duration = (end_int - start_int) * df['time_diff'].mean() / 60
             avg_hr = hr_data.iloc[start_idx:end_idx].mean()
             max_hr = hr_data.iloc[start_idx:end_idx].max()
             
