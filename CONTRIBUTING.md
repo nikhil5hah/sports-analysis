@@ -240,7 +240,7 @@ This project is licensed under the MIT License.
 
 ## 🙏 Recognition
 
-Contributors will be recognized in:
+Contributors will be recognised in:
 - CONTRIBUTORS.md
 - Project documentation
 - Release notes
