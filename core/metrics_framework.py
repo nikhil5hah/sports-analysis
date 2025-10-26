@@ -481,11 +481,16 @@ class RallyDetector(BaseMetricDetector):
             # Skip first 5 minutes as potential warm-up
             baseline_hr = hr_data.iloc[min(300, len(hr_data)//10):].quantile(0.2)
         
-        # Rally threshold: HR must be significantly elevated (40% above baseline)
-        rally_threshold = baseline_hr + (hr_data.max() - baseline_hr) * 0.4
+        # Rally threshold: HR must be significantly elevated (25% above baseline for more detections)
+        rally_threshold = baseline_hr + (hr_data.max() - baseline_hr) * 0.25
+        
+        # Log for debugging
+        logger.info(f"Rally detection: baseline_hr={baseline_hr:.1f}, max_hr={hr_data.max():.1f}, threshold={rally_threshold:.1f}")
         
         # Find elevated HR periods (potential rallies)
         above_threshold = hr_data > rally_threshold
+        
+        logger.info(f"HR above threshold points: {above_threshold.sum()} out of {len(hr_data)}")
         
         # Track rallies with proper start/end detection
         # A rally is: elevated HR that lasts 5-90 seconds
@@ -498,15 +503,22 @@ class RallyDetector(BaseMetricDetector):
             elif not is_elevated and current_start is not None:
                 # Check if this was a valid rally (5-90 seconds)
                 duration_seconds = i - current_start
-                if 5 <= duration_seconds <= 90:  # Valid rally duration
-                    rally_periods.append((current_start, i))
+                if duration_seconds >= 5:  # Minimum 5 seconds
+                    # Extend to max 180 seconds (3 mins) instead of 90
+                    if duration_seconds <= 180:
+                        rally_periods.append((current_start, i))
+                    # Log if rally was too long
+                    elif duration_seconds > 180:
+                        logger.info(f"Skipping potential rally: {duration_seconds}s (too long)")
                 current_start = None
         
         # Handle case where rally continues to end of data
         if current_start is not None:
             duration_seconds = len(hr_data) - current_start
-            if duration_seconds >= 5 and duration_seconds <= 90:
+            if duration_seconds >= 5 and duration_seconds <= 180:
                 rally_periods.append((current_start, len(hr_data)))
+        
+        logger.info(f"Detected {len(rally_periods)} rallies")
         
         # Convert to rally information
         rallies = []
