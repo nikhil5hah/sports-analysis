@@ -563,9 +563,13 @@ def create_timeline_view(raw_data, analysis_data):
     if timeline_blocks:
         # Add blocks to timeline
         for block in timeline_blocks:
+            # Ensure start and end are proper timestamp objects
+            start_time = pd.to_datetime(block['start'])
+            end_time = pd.to_datetime(block['end'])
+            
             fig.add_vrect(
-                x0=block['start'],
-                x1=block['end'],
+                x0=start_time,
+                x1=end_time,
                 fillcolor=block['color'],
                 opacity=0.3,
                 annotation_text=block['label'],
