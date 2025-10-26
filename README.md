@@ -22,10 +22,15 @@ Build a modular, extensible platform that:
 
 ## 📚 Documentation
 
-- **[Project Plan](./PROJECT_PLAN.md)** - Detailed 40-week development roadmap
-- **[Architecture](./ARCHITECTURE.md)** - System design and structure
-- **[Contributing](./CONTRIBUTING.md)** - How to contribute to the project
-- **[Quick Start](./QUICK_START.md)** - Getting started with the MVP
+**Start here**: [AI Context](./AI_CONTEXT.md) - Complete project overview for AI agents and new developers
+
+**Planning & Design**:
+- [Project Plan](./PROJECT_PLAN.md) - 40-week development roadmap
+- [Architecture](./ARCHITECTURE.md) - System design and structure
+
+**For Contributors**:
+- [Contributing](./CONTRIBUTING.md) - How to add features
+- [Quick Start](./QUICK_START.md) - Getting started guide
 
 ## ✨ Key Features
 
