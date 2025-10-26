@@ -399,10 +399,9 @@ def display_analysis_results(analysis_data, raw_data):
     # Visualizations
     st.header("📈 Performance Visualizations")
     
-    # Timeline View
-    st.subheader("Session Timeline")
-    fig_timeline = create_timeline_view(raw_data, analysis_data)
-    st.plotly_chart(fig_timeline, use_container_width=True)
+    # Session Breakdown Pie Chart
+    fig_pie = create_session_breakdown_chart(raw_data, analysis_data)
+    st.plotly_chart(fig_pie, use_container_width=True)
     
     # Heart Rate Over Time
     st.subheader("Heart Rate Over Time")
@@ -523,77 +522,74 @@ def create_confidence_chart(metrics):
     
     return fig
 
-def create_timeline_view(raw_data, analysis_data):
-    """Create timeline view with rectangular blocks for warm-up, games, rests, and cool-down."""
-    fig = go.Figure()
-    
-    # Get timeline data
+def create_session_breakdown_chart(raw_data, analysis_data):
+    """Create pie chart showing session breakdown (warm-up, playing, cool-down, etc.)."""
     metrics = analysis_data['metrics']
-    timeline_blocks = []
     
-    # Warm-up
-    warmup_result = metrics.get('warm_up_length')
-    if warmup_result and warmup_result.data_points and len(warmup_result.data_points) > 0:
-        start_idx, end_idx = warmup_result.data_points[0]
-        start_time = raw_data['timestamp'].iloc[start_idx] if start_idx < len(raw_data) else raw_data['timestamp'].iloc[0]
-        end_time = raw_data['timestamp'].iloc[end_idx] if end_idx < len(raw_data) else raw_data['timestamp'].iloc[-1]
-        duration = format_time_duration(warmup_result.value)
-        timeline_blocks.append({
-            'start': start_time,
-            'end': end_time,
-            'label': f'Warm-up ({duration})',
-            'color': 'lightblue'
-        })
+    # Get session duration
+    total_duration = metrics.get('total_session_duration')
+    if total_duration and total_duration.value:
+        total_mins = total_duration.value
+    else:
+        total_mins = analysis_data['session_summary'].get('total_duration_minutes', 0)
     
-    # Cool-down
-    cooldown_result = metrics.get('cool_down_length')
-    if cooldown_result and cooldown_result.data_points and len(cooldown_result.data_points) > 0:
-        start_idx, end_idx = cooldown_result.data_points[0]
-        start_time = raw_data['timestamp'].iloc[start_idx] if start_idx < len(raw_data) else raw_data['timestamp'].iloc[0]
-        end_time = raw_data['timestamp'].iloc[end_idx] if end_idx < len(raw_data) else raw_data['timestamp'].iloc[-1]
-        duration = format_time_duration(cooldown_result.value)
-        timeline_blocks.append({
-            'start': start_time,
-            'end': end_time,
-            'label': f'Cool-down ({duration})',
-            'color': 'lightgreen'
-        })
+    # Get different components
+    warmup_mins = metrics.get('warm_up_length')
+    warmup_value = warmup_mins.value if warmup_mins and warmup_mins.confidence > 0.5 else 0
     
-    # Create timeline visualization
-    if timeline_blocks:
-        # Add blocks to timeline
-        for block in timeline_blocks:
-            # Ensure start and end are proper timestamp objects
-            start_time = pd.to_datetime(block['start'])
-            end_time = pd.to_datetime(block['end'])
-            
-            fig.add_vrect(
-                x0=start_time,
-                x1=end_time,
-                fillcolor=block['color'],
-                opacity=0.3,
-                annotation_text=block['label'],
-                annotation_position="top"
-            )
+    cooldown_mins = metrics.get('cool_down_length')
+    cooldown_value = cooldown_mins.value if cooldown_mins and cooldown_mins.confidence > 0.5 else 0
     
-    # Add session duration line
-    fig.add_vline(
-        x=raw_data['timestamp'].iloc[0],
-        line_dash="dash",
-        line_color="gray",
-        annotation_text="Session Start"
-    )
-    fig.add_vline(
-        x=raw_data['timestamp'].iloc[-1],
-        line_dash="dash",
-        line_color="gray",
-        annotation_text="Session End"
-    )
+    playing_mins = metrics.get('total_playing_time')
+    playing_value = playing_mins.value if playing_mins and playing_mins.confidence > 0.5 else 0
+    
+    # Calculate rest time
+    rest_value = total_mins - warmup_value - playing_value - cooldown_value
+    
+    # Prepare data for pie chart
+    labels = []
+    values = []
+    colors = []
+    
+    if warmup_value > 0:
+        labels.append(f'Warm-up ({format_time_duration(warmup_value)})')
+        values.append(warmup_value)
+        colors.append('#87CEEB')  # Light blue
+    
+    if playing_value > 0:
+        labels.append(f'Playing Time ({format_time_duration(playing_value)})')
+        values.append(playing_value)
+        colors.append('#FF6B6B')  # Red
+    
+    if rest_value > 0:
+        labels.append(f'Rest ({format_time_duration(rest_value)})')
+        values.append(rest_value)
+        colors.append('#90EE90')  # Light green
+    
+    if cooldown_value > 0:
+        labels.append(f'Cool-down ({format_time_duration(cooldown_value)})')
+        values.append(cooldown_value)
+        colors.append('#D3D3D3')  # Light grey
+    
+    if not values:
+        # Fallback if no components detected
+        labels.append(f'Full Session ({format_time_duration(total_mins)})')
+        values.append(total_mins)
+        colors.append('#8B9DC3')
+    
+    # Create pie chart
+    fig = go.Figure(data=[go.Pie(
+        labels=labels,
+        values=values,
+        marker_colors=colors,
+        textinfo='label+percent',
+        textposition='outside'
+    )])
     
     fig.update_layout(
-        title="Session Timeline",
-        xaxis_title="Time",
-        height=200
+        title="Session Breakdown",
+        height=400,
+        showlegend=True
     )
     
     return fig

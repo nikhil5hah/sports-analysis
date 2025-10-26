@@ -137,49 +137,59 @@ class WarmUpDetector(BaseMetricDetector):
         low_variability = rolling_std < rolling_std.quantile(0.3)
         increasing_hr = hr_diff > 0
         
-        # Warm-up typically occurs in first 20% of session
-        max_warmup_time = len(hr_data) * 0.2
-        warmup_mask = (low_variability & increasing_hr) & (hr_data.index <= max_warmup_time)
+        # Improved warm-up detection
+        # Warm-up: first 3-10 minutes where HR gradually increases
+        baseline_hr = hr_data.iloc[:10].mean()
+        max_hr = hr_data.max()
         
-        if warmup_mask.any():
-            warmup_start = hr_data.index[warmup_mask].min()
-            warmup_end = hr_data.index[warmup_mask].max()
-            
-            # Extend warm-up to include initial low-intensity period
-            initial_low_hr = hr_data.iloc[:int(len(hr_data) * 0.1)].mean()
-            extended_start = hr_data[hr_data <= initial_low_hr * 1.1].index.min()
-            
-            # Calculate duration using time_diff if available
-            # Ensure indices are numeric
-            extended_start_int = int(extended_start) if isinstance(extended_start, (int, np.integer)) else extended_start
-            warmup_end_int = int(warmup_end) if isinstance(warmup_end, (int, np.integer)) else warmup_end
-            
-            if 'time_diff' in df.columns:
-                warmup_duration = (warmup_end_int - extended_start_int) * df['time_diff'].mean() / 60
-            else:
-                # Fallback: calculate from timestamps
-                warmup_duration = (df['timestamp'].iloc[warmup_end_int] - df['timestamp'].iloc[extended_start_int]).total_seconds() / 60
-            
-            confidence = self.get_confidence_score(df, warmup_duration)
-            
-            return MetricResult(
-                metric_name=self.metric_name,
-                value=warmup_duration,
-                confidence=confidence,
-                metadata={
-                    'start_time': extended_start,
-                    'end_time': warmup_end,
-                    'avg_heart_rate': hr_data.iloc[warmup_start:warmup_end].mean(),
-                    'algorithm': 'hr_pattern_analysis'
-                },
-                data_points=[(extended_start, warmup_end)]
-            )
+        # Find where HR reaches 70% of max (typically end of warm-up)
+        threshold_hr = baseline_hr + (max_hr - baseline_hr) * 0.3
+        
+        # Look in first 15% of session only
+        max_search_points = int(len(hr_data) * 0.15)
+        
+        # Find first point where HR crosses threshold
+        warmup_end_idx = None
+        for i in range(min(100, max_search_points)):  # Check first points
+            if hr_data.iloc[i] >= threshold_hr:
+                warmup_end_idx = i
+                break
+        
+        # If no threshold crossed, use 10% of session as default
+        if warmup_end_idx is None:
+            warmup_end_idx = min(int(len(hr_data) * 0.1), 600)  # Max 10 minutes
+        
+        # Ensure warm-up is reasonable (3-10 minutes)
+        if warmup_end_idx < 180:  # Less than 3 minutes
+            warmup_end_idx = 180  # Minimum 3 minutes
+        
+        if warmup_end_idx > 600:  # More than 10 minutes
+            warmup_end_idx = 600  # Maximum 10 minutes
+        
+        warmup_start_idx = 0
+        extended_start_int = warmup_start_idx
+        warmup_end_int = warmup_end_idx
+        
+        # Calculate duration
+        if 'time_diff' in df.columns:
+            warmup_duration = (warmup_end_int - extended_start_int) * df['time_diff'].mean() / 60
+        else:
+            warmup_duration = (warmup_end_int - extended_start_int) / 60
+        
+        confidence = self.get_confidence_score(df, warmup_duration)
         
         return MetricResult(
             metric_name=self.metric_name,
-            value=0,
-            confidence=0.0,
-            metadata={'error': 'No warm-up pattern detected'}
+            value=warmup_duration,
+            confidence=confidence,
+            metadata={
+                'start_time': df['timestamp'].iloc[warmup_start_idx],
+                'end_time': df['timestamp'].iloc[warmup_end_int],
+                'baseline_hr': baseline_hr,
+                'threshold_hr': threshold_hr,
+                'algorithm': 'warm_up_v1.2_improved'
+            },
+            data_points=[(warmup_start_idx, warmup_end_int)]
         )
     
     def get_confidence_score(self, df: pd.DataFrame, result: Any) -> float:
