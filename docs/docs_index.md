@@ -1,16 +1,15 @@
 # Documentation Index
 
-## Quick Start
-- [quick_start.md](quick_start.md) - Get started with the application
+## Getting Started
+- **[quick_start.md](quick_start.md)** - Quick start guide (bare bones instructions)
 
-## Development
-- [architecture.md](architecture.md) - System architecture
-- [contributing.md](contributing.md) - Contribution guidelines
+## Technical Documentation
+- **[metrics_definitions.md](metrics_definitions.md)** - Complete metric definitions and logic
+- **[architecture.md](architecture.md)** - System architecture and design
+- **[contributing.md](contributing.md)** - Contribution guidelines
 
-## Working Documents
-- **[metrics_definitions.md](metrics_definitions.md)** ← **CURRENT METRICS STATUS (zone-based implemented)**
-- [planning/project_plan.md](planning/project_plan.md) - Overall project plan
+## Project Planning
+- **[project_plan.md](project_plan.md)** - Overall project plan and roadmap
 
 ## For AI Assistants
-- [planning/ai_context.md](planning/ai_context.md)
-- [planning/chat_context.md](planning/chat_context.md)
+- **[../AI_CONTEXT.md](../AI_CONTEXT.md)** - Comprehensive project context for AI sessions

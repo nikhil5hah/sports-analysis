@@ -24,13 +24,14 @@ Build a modular, extensible platform that:
 
 **Start here**: [AI Context](./AI_CONTEXT.md) - Complete project overview for AI agents and new developers
 
-**Planning & Design**:
-- [Project Plan](./PROJECT_PLAN.md) - 40-week development roadmap
-- [Architecture](./ARCHITECTURE.md) - System design and structure
+**Getting Started**:
+- [Quick Start Guide](./docs/quick_start.md) - Bare bones getting started
 
-**For Contributors**:
-- [Contributing](./CONTRIBUTING.md) - How to add features
-- [Quick Start](./QUICK_START.md) - Getting started guide
+**Technical Documentation**:
+- [Metrics Definitions](./docs/metrics_definitions.md) - Complete metric definitions and logic
+- [Architecture](./docs/architecture.md) - System design and structure
+- [Contributing](./docs/contributing.md) - How to add features
+- [Project Plan](./docs/project_plan.md) - Development roadmap
 
 ## ✨ Key Features
 
