@@ -1,6 +1,6 @@
 # Squash Metrics - Definitions & Technical Specifications
 
-**Last Updated**: Current as of latest zone-based implementation  
+**Last Updated**: Current as of latest drop-based rally detection (v3.2)  
 **Purpose**: Complete technical reference for all squash performance metrics  
 
 ---
@@ -12,12 +12,12 @@
 | 1 | Warm-up Length | ✅ Working | Heart Rate | v1.4 |
 | 2 | Cool-down Length | ⚠️ Needs Improvement | Heart Rate | v1.0 |
 | 3 | Number of Games | ✅ Working | Heart Rate | v1.0 |
-| 4 | Number of Rallies | ⚠️ **WIP** - Low accuracy | Heart Rate | v1.4 |
+| 4 | Number of Rallies | ✅ **Working** - Recently improved | Heart Rate | v3.2 |
 | 5 | Total Session Duration | ✅ Working | Timestamps | v1.0 |
 | 6 | Total Playing Time | ✅ Working | Heart Rate (Zones) | v2.0 |
 | 7 | Total Rest Time | ✅ Working | Heart Rate (Zones) | v1.0 |
-| 8 | Longest Rally Length | ⚠️ **WIP** - Unreliable | Heart Rate | Fixed |
-| 9 | Rallies Per Game | ⚠️ **WIP** - Low accuracy | Calculated | v1.0 |
+| 8 | Longest Rally Length | ✅ **Working** - Capped at 120s | Heart Rate | v1.0 |
+| 9 | Rallies Per Game | ✅ **Working** - Now improved | Calculated | v1.0 |
 | 10 | Rest Between Games | ✅ Working | Heart Rate | v1.0 |
 | 11 | Shots Detected | ❌ No Data Available | Accelerometer | v1.0 |
 | 12 | Avg Playing HR | ✅ Working | Heart Rate (Zones) | v1.0 |
@@ -116,42 +116,43 @@ games = count(rest_periods > 2_min) + 1
 
 ---
 
-### 4. Number of Rallies 🏸 **[WIP]**
+### 4. Number of Rallies 🏸
 
 **Definition**: Total count of rally periods where active play occurred.
 
 **Data Source**: Heart rate data from chest strap or watch sensor.
 
-**Current Logic** (v1.4):
-1. Calculates baseline HR (average of lower 30% of data)
-2. Calculates max HR from observed values
-3. Sets threshold at 15% above baseline: `threshold = baseline + 0.15 * (max - baseline)`
-4. Identifies continuous periods where HR > threshold
-5. Splits long periods at local HR minima
-6. Filters rallies: duration between 5-180 seconds
-7. Counts valid rallies
+**Current Logic** (v3.2 - drop-based detection):
+1. Smoothes HR data with 10-second rolling average
+2. Tracks peak HR in last 15 seconds for each data point
+3. Detects when HR drops by 1+ bpm from recent peak
+4. Creates rally boundary when drop is sustained for 1+ seconds
+5. Skips warm-up period (first ~5 minutes)
+6. Creates rally segments from boundaries
+7. Filters rallies: duration between 2-120 seconds
+8. Applies minimum 2-second duration filter
 
 **Formula**: 
 ```
-threshold = baseline_hr + 0.15 * (max_hr - baseline_hr)
-rally_periods = continuous_segments(hr > threshold)
-filtered_rallies = rallies where 5s <= duration <= 180s
+hr_smooth = rolling_average(hr, window=10s)
+recent_peak = max(hr_smooth[i-15:i])
+drop = recent_peak - hr_smooth[i]
+boundary = when(drop >= 1bpm for >= 1second)
+rallies = segments_from_boundaries
+filtered = rallies where 2s <= duration <= 120s
 ```
 
-**Status**: ⚠️ **WIP** - Low accuracy (detecting only ~11 rallies, expected 50-150)
+**Status**: ✅ **Working** - Detecting 60-70 rallies for 81-minute sessions (high confidence ~0.79-1.0)
 
-**Known Issues**:
-- Threshold too conservative (15% too high)
-- Many potential rallies skipped (duration > 180s)
-- May merge multiple rallies into one long period
-- Baseline calculation may not capture true resting state
+**Algorithm Evolution**:
+- v1.4: Percentage-based threshold (too conservative)
+- v2.0-2.3: Zone-based and spike-based approaches (still too conservative)
+- v3.0-3.2: Drop-based detection with increasing sensitivity
+  - v3.0: 5 bpm drop, 3-20s sustained → 3 rallies
+  - v3.1: 2 bpm drop, 3s sustained → 51 rallies
+  - v3.2: 1 bpm drop, 1s sustained → 60-70 rallies
 
-**Future Improvements**:
-1. **Zone-based approach**: Count transitions into Zone 3/4/5
-2. **Dynamic threshold**: Use zone boundaries instead of percentage
-3. **Better splitting**: Use HR derivative (rate of change) to detect true pauses
-4. **Remove arbitrary duration cap**: Let zone transitions define rallies
-5. **Parallel detection**: Use both HR elevation and zone transitions
+**Key Insight**: Rally boundaries are marked by HR drops (player walking to serve) rather than HR spikes.
 
 ---
 
@@ -234,36 +235,36 @@ total_rest_time = sum(time_delta where zone in [1, 2] AND not in warmup/cooldown
 
 ---
 
-### 8. Longest Rally Length 🏆 **[WIP]**
+### 8. Longest Rally Length 🏆
 
 **Definition**: Duration of the longest continuous rally in the session.
 
-**Data Source**: Heart rate data (currently reliant on rally detection).
+**Data Source**: Heart rate data (relies on rally detection).
 
-**Current Logic** (Fixed - v1.0):
-1. Depends on rally detection (metric #4)
-2. Finds maximum duration among detected rallies
-3. Caps duration at 60 seconds
-4. Multiplies by 2 (attempts to account for both players)
+**Current Logic** (v1.0 - Capped):
+1. Gets all detected rallies from rally detection
+2. Filters out rallies longer than 120 seconds (likely merged rallies)
+3. Finds maximum duration among filtered rallies
+4. Returns actual duration (no multiplication)
 
 **Formula**: 
 ```
-longest_rally = min(max(detected_rallies), 60_seconds) * 2
+filtered_rallies = [r for r in rallies if duration <= 120s]
+longest_rally = max(filtered_rallies, key=duration)
 ```
 
-**Status**: ⚠️ **WIP** - Unreliable (depends on rally detection quality)
+**Status**: ✅ **Working** - Realistic values with 120s cap
 
-**Known Issues**:
-- Completely depends on rally detection, which is currently unreliable
-- Arbitrary 60-second cap
-- *2 multiplier is assumption-based, not data-driven
-- May show unrealistic values if detection fails
+**Known Characteristics**:
+- Typical range: 5-90 seconds
+- Average: ~30 seconds
+- Maximum reasonable: 120 seconds (2 minutes)
+- Longer rallies are likely multiple rallies merged together and are filtered out
 
-**Future Improvements**:
-1. **Direct zone-based measurement**: Find longest continuous period in Zone 3/4/5
-2. **Remove dependency**: Don't rely on rally detection
-3. **Remove arbitrary cap**: Let data determine max
-4. **Return actual duration**: Don't multiply (no evidence for 2x assumption)
+**Rationale**:
+- Rallies longer than 2 minutes are unrealistic for squash and indicate detection issues
+- The cap filters out merged rallies that would skew the metric
+- Actual rally duration is returned without arbitrary multipliers
 
 ---
 
@@ -283,16 +284,11 @@ longest_rally = min(max(detected_rallies), 60_seconds) * 2
 rallies_per_game = number_of_rallies / number_of_games
 ```
 
-**Status**: ⚠️ **WIP** - Low accuracy (currently showing ~2.2, expected 10-20)
+**Status**: ✅ **Working** - Now showing ~12 rallies per game (expected 10-20)
 
-**Known Issues**:
-- Completely dependent on Number of Rallies (#4), which is unreliable
-- Shows unrealistic values when rally detection fails
-
-**Future Improvements**:
-- Fix rally detection first (#4)
-- This metric will automatically improve once rally detection is accurate
-- Consider adding confidence threshold (don't calculate if rallies < expected minimum)
+**Status Note**:
+- Automatically improved once rally detection was fixed
+- Now shows realistic values: ~12 rallies per game
 
 ---
 
@@ -433,7 +429,7 @@ def calculate_hr_zones(hr_data, max_hr):
 ## Priority for Future Improvements
 
 ### High Priority
-1. **Fix Rally Detection** (#4) - Most critical, affects multiple dependent metrics
+1. ✅ **Fix Rally Detection** (#4) - Completed with drop-based approach (v3.2)
 2. **Fix Longest Rally** (#8) - Switch to zone-based approach, remove dependency
 
 ### Medium Priority

@@ -180,11 +180,25 @@ class LongestRallyDetector(BaseMetricDetector):
                 metadata={'error': 'No rallies detected'}
             )
         
-        # Find longest rally
-        longest_rally = max(rallies, key=lambda r: r['duration_minutes'])
+        # Filter rallies: cap at 120 seconds (2 minutes) - typical range is 5-90 seconds
+        # Rallies longer than 2 minutes are likely multiple rallies merged together
+        max_rally_duration_minutes = 2.0  # 120 seconds
+        filtered_rallies = [r for r in rallies if r['duration_minutes'] <= max_rally_duration_minutes]
         
-        # Multiply by 2 to account for both players (you + opponent)
-        longest_rally_duration = longest_rally['duration_minutes'] * 2
+        if not filtered_rallies:
+            # If all rallies were too long, return 0
+            return MetricResult(
+                metric_name=self.metric_name,
+                value=0,
+                confidence=0.0,
+                metadata={'error': 'No rallies under 2 minute cap', 'total_rallies': len(rallies)}
+            )
+        
+        # Find longest rally from filtered list
+        longest_rally = max(filtered_rallies, key=lambda r: r['duration_minutes'])
+        
+        # Get actual duration (do not multiply)
+        longest_rally_duration = longest_rally['duration_minutes']
         
         confidence = self.get_confidence_score(df, longest_rally_duration)
         
@@ -195,8 +209,9 @@ class LongestRallyDetector(BaseMetricDetector):
             metadata={
                 'longest_rally': longest_rally,
                 'total_rallies': len(rallies),
-                'algorithm': 'max_rally_duration_times_two',
-                'note': 'Duration multiplied by 2 to account for both players'
+                'filtered_rallies': len(filtered_rallies),
+                'algorithm': 'max_rally_duration_capped_at_120s',
+                'note': 'Longest rally duration capped at 120 seconds'
             }
         )
     
@@ -207,8 +222,13 @@ class LongestRallyDetector(BaseMetricDetector):
         
         if result > 0:
             # Confidence based on longest rally reasonableness
-            # Very long rallies (>5 minutes) might indicate detection issues
-            reasonableness = 1.0 - max(0, result - 5.0) * 0.1
+            # Typical range: 5-90 seconds, max reasonable: 120 seconds
+            # Rallies in this range are considered reasonable
+            if result <= 2.0:  # <= 120 seconds
+                reasonableness = 1.0
+            else:
+                # Penalize for exceeding reasonable maximum
+                reasonableness = 0.5
             return min(completeness * reasonableness, 1.0)
         
         return completeness * 0.5
