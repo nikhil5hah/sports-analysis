@@ -149,7 +149,16 @@ class WarmUpDetector(BaseMetricDetector):
             initial_low_hr = hr_data.iloc[:int(len(hr_data) * 0.1)].mean()
             extended_start = hr_data[hr_data <= initial_low_hr * 1.1].index.min()
             
-            warmup_duration = (warmup_end - extended_start) * df['time_diff'].mean() / 60
+            # Calculate duration using time_diff if available
+            # Ensure indices are numeric
+            extended_start_int = int(extended_start) if isinstance(extended_start, (int, np.integer)) else extended_start
+            warmup_end_int = int(warmup_end) if isinstance(warmup_end, (int, np.integer)) else warmup_end
+            
+            if 'time_diff' in df.columns:
+                warmup_duration = (warmup_end_int - extended_start_int) * df['time_diff'].mean() / 60
+            else:
+                # Fallback: calculate from timestamps
+                warmup_duration = (df['timestamp'].iloc[warmup_end_int] - df['timestamp'].iloc[extended_start_int]).total_seconds() / 60
             
             confidence = self.get_confidence_score(df, warmup_duration)
             
@@ -246,7 +255,12 @@ class CoolDownDetector(BaseMetricDetector):
             cooldown_start = cooldown_data.index[0]
             cooldown_end = hr_data.index[-1]
             
-            cooldown_duration = (cooldown_end - cooldown_start) * df['time_diff'].mean() / 60
+            # Calculate duration using time_diff if available
+            if 'time_diff' in df.columns:
+                cooldown_duration = (cooldown_end - cooldown_start) * df['time_diff'].mean() / 60
+            else:
+                # Fallback: calculate from timestamps
+                cooldown_duration = (df['timestamp'].iloc[cooldown_end] - df['timestamp'].iloc[cooldown_start]).total_seconds() / 60
             
             confidence = self.get_confidence_score(df, cooldown_duration)
             
@@ -349,7 +363,12 @@ class GameDetector(BaseMetricDetector):
         # Calculate rest period durations
         rest_durations = []
         for start_idx, end_idx in rest_periods:
-            duration = (end_idx - start_idx) * df['time_diff'].mean() / 60
+            # Calculate duration using time_diff if available
+            if 'time_diff' in df.columns:
+                duration = (end_idx - start_idx) * df['time_diff'].mean() / 60
+            else:
+                # Fallback: calculate from timestamps
+                duration = (df['timestamp'].iloc[end_idx] - df['timestamp'].iloc[start_idx]).total_seconds() / 60
             rest_durations.append(duration)
         
         # Distinguish game breaks (>2 minutes) from rally breaks (<30 seconds)

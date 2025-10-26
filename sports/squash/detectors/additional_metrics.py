@@ -337,7 +337,12 @@ class RestBetweenGamesDetector(BaseMetricDetector):
         # Calculate rest period durations
         rest_durations = []
         for start_idx, end_idx in rest_periods:
-            duration = (end_idx - start_idx) * df['time_diff'].mean() / 60
+            # Calculate duration using time_diff if available
+            if 'time_diff' in df.columns:
+                duration = (end_idx - start_idx) * df['time_diff'].mean() / 60
+            else:
+                # Fallback: calculate from timestamps
+                duration = (df['timestamp'].iloc[end_idx] - df['timestamp'].iloc[start_idx]).total_seconds() / 60
             rest_durations.append(duration)
         
         # Filter for game breaks (>2 minutes)
