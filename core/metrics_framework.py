@@ -138,33 +138,45 @@ class WarmUpDetector(BaseMetricDetector):
         increasing_hr = hr_diff > 0
         
         # Improved warm-up detection
-        # Warm-up: first 3-10 minutes where HR gradually increases
+        # Warm-up: HR spike followed by stabilization within first 5 mins
+        # HR should not exceed 160 bpm during warm-up
+        
         baseline_hr = hr_data.iloc[:10].mean()
-        max_hr = hr_data.max()
+        max_search_seconds = 300  # Only check first 5 minutes
+        max_search_points = min(300, len(hr_data))  # 5 minutes max
         
-        # Find where HR reaches 70% of max (typically end of warm-up)
-        threshold_hr = baseline_hr + (max_hr - baseline_hr) * 0.3
+        # Find first significant HR spike (>20 bpm increase from baseline)
+        spike_threshold = baseline_hr + 20
+        warmup_spike_idx = None
         
-        # Look in first 15% of session only
-        max_search_points = int(len(hr_data) * 0.15)
-        
-        # Find first point where HR crosses threshold
-        warmup_end_idx = None
-        for i in range(min(600, max_search_points)):  # Check first 10 minutes
-            if hr_data.iloc[i] >= threshold_hr:
-                warmup_end_idx = i
+        for i in range(min(300, len(hr_data))):
+            if hr_data.iloc[i] >= spike_threshold and hr_data.iloc[i] < 160:
+                warmup_spike_idx = i
                 break
         
-        # If no threshold crossed, use fixed 5 minutes as default (reasonable warm-up)
-        if warmup_end_idx is None:
-            warmup_end_idx = 300  # 5 minutes default
+        if warmup_spike_idx is None:
+            # No clear spike, use 5 minutes as default
+            warmup_end_idx = 300
+        else:
+            # Look for stabilization after spike (HR within 10 bpm range)
+            spike_hr = hr_data.iloc[warmup_spike_idx]
+            stabilized = False
+            
+            for i in range(warmup_spike_idx + 1, min(warmup_spike_idx + 60, len(hr_data))):
+                current_hr = hr_data.iloc[i]
+                if abs(current_hr - spike_hr) < 10:
+                    stabilized = True
+                    warmup_end_idx = i
+                    break
+            
+            if not stabilized:
+                warmup_end_idx = warmup_spike_idx + 60  # 1 minute after spike
+            
+            # Ensure max 5 minutes
+            warmup_end_idx = min(warmup_end_idx, 300)
         
-        # Ensure warm-up is reasonable (3-8 minutes)
-        if warmup_end_idx < 180:  # Less than 3 minutes
-            warmup_end_idx = 180  # Minimum 3 minutes
-        
-        if warmup_end_idx > 480:  # More than 8 minutes
-            warmup_end_idx = 480  # Maximum 8 minutes
+        # Ensure minimum 2 minutes
+        warmup_end_idx = max(warmup_end_idx, 120)
         
         warmup_start_idx = 0
         extended_start_int = warmup_start_idx
@@ -186,8 +198,8 @@ class WarmUpDetector(BaseMetricDetector):
                 'start_time': df['timestamp'].iloc[warmup_start_idx],
                 'end_time': df['timestamp'].iloc[warmup_end_int],
                 'baseline_hr': baseline_hr,
-                'threshold_hr': threshold_hr,
-                'algorithm': 'warm_up_v1.2_improved'
+                'spike_threshold': spike_threshold,
+                'algorithm': 'warm_up_v1.3_spike_stabilization'
             },
             data_points=[(warmup_start_idx, warmup_end_int)]
         )
@@ -457,35 +469,44 @@ class RallyDetector(BaseMetricDetector):
                 metadata={'error': 'Insufficient heart rate data'}
             )
         
-        # Calculate baseline heart rate (excluding warm-up)
+        # Improved rally detection
+        # Rallies are localized elevated HR windows (for shots)
+        # Looking for HR spikes that occur in elevated HR zones
+        
+        # Calculate baseline HR (excluding warm-up if detected)
         warmup_info = context.get('warmup_info', {}) if context else {}
         if warmup_info.get('end_time', 0) > 0:
             baseline_hr = hr_data.iloc[warmup_info['end_time']:].quantile(0.2)
         else:
-            baseline_hr = hr_data.quantile(0.2)
+            # Skip first 5 minutes as potential warm-up
+            baseline_hr = hr_data.iloc[min(300, len(hr_data)//10):].quantile(0.2)
         
-        # Define rally threshold (elevated HR above baseline)
-        rally_threshold = baseline_hr + (hr_data.max() - baseline_hr) * 0.3
+        # Rally threshold: HR must be significantly elevated (40% above baseline)
+        rally_threshold = baseline_hr + (hr_data.max() - baseline_hr) * 0.4
         
-        # Find periods above threshold
+        # Find elevated HR periods (potential rallies)
         above_threshold = hr_data > rally_threshold
         
-        # Group consecutive periods
+        # Track rallies with proper start/end detection
+        # A rally is: elevated HR that lasts 5-90 seconds
         rally_periods = []
         current_start = None
         
-        for i, is_rally in enumerate(above_threshold):
-            if is_rally and current_start is None:
+        for i, is_elevated in enumerate(above_threshold):
+            if is_elevated and current_start is None:
                 current_start = i
-            elif not is_rally and current_start is not None:
-                # End of rally period
-                if i - current_start >= 5:  # Minimum rally duration (5 data points)
+            elif not is_elevated and current_start is not None:
+                # Check if this was a valid rally (5-90 seconds)
+                duration_seconds = i - current_start
+                if 5 <= duration_seconds <= 90:  # Valid rally duration
                     rally_periods.append((current_start, i))
                 current_start = None
         
         # Handle case where rally continues to end of data
-        if current_start is not None and len(hr_data) - current_start >= 5:
-            rally_periods.append((current_start, len(hr_data)))
+        if current_start is not None:
+            duration_seconds = len(hr_data) - current_start
+            if duration_seconds >= 5 and duration_seconds <= 90:
+                rally_periods.append((current_start, len(hr_data)))
         
         # Convert to rally information
         rallies = []
@@ -524,7 +545,7 @@ class RallyDetector(BaseMetricDetector):
                 'avg_rally_duration': np.mean([r['duration_minutes'] for r in rallies]) if rallies else 0,
                 'longest_rally_duration': max([r['duration_minutes'] for r in rallies]) if rallies else 0,
                 'total_rally_time': sum([r['duration_minutes'] for r in rallies]),
-                'algorithm': 'hr_threshold_analysis'
+                'algorithm': 'hr_elevated_windows_v1.3'
             }
         )
     
