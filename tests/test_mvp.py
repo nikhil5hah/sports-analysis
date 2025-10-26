@@ -10,9 +10,9 @@ import logging
 from datetime import datetime, timedelta
 
 # Import our modules
-from data_ingestion import FitnessDataImporter
-from event_detection import EventDetector
-from performance_analysis import PerformanceAnalyzer
+from data.ingestion.data_ingestion import FitnessDataImporter
+from sports.squash.detectors.event_detection import EventDetector
+from sports.squash.detectors.performance_analysis import PerformanceAnalyzer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

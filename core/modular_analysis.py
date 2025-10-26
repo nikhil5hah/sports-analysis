@@ -27,7 +27,7 @@ class ModularAnalysisEngine:
     def _register_all_detectors(self):
         """Register all available metric detectors."""
         # Core metrics from metrics_framework
-        from metrics_framework import WarmUpDetector, CoolDownDetector, GameDetector, RallyDetector
+        from .metrics_framework import WarmUpDetector, CoolDownDetector, GameDetector, RallyDetector
         
         self.framework.register_detector(WarmUpDetector())
         self.framework.register_detector(CoolDownDetector())

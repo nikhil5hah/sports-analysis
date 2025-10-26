@@ -82,7 +82,7 @@ class PlayingTimeDetector(BaseMetricDetector):
         
         if not rallies:
             # Fallback: detect rallies ourselves
-            from metrics_framework import RallyDetector
+            from core.metrics_framework import RallyDetector
             rally_detector = RallyDetector()
             rally_result = rally_detector.detect(df, context)
             rallies = rally_result.metadata.get('rallies', [])
@@ -152,7 +152,7 @@ class LongestRallyDetector(BaseMetricDetector):
         
         if not rallies:
             # Fallback: detect rallies ourselves
-            from metrics_framework import RallyDetector
+            from core.metrics_framework import RallyDetector
             rally_detector = RallyDetector()
             rally_result = rally_detector.detect(df, context)
             rallies = rally_result.metadata.get('rallies', [])
@@ -224,14 +224,14 @@ class RalliesPerGameDetector(BaseMetricDetector):
         
         if not rallies:
             # Fallback: detect rallies ourselves
-            from metrics_framework import RallyDetector
+            from core.metrics_framework import RallyDetector
             rally_detector = RallyDetector()
             rally_result = rally_detector.detect(df, context)
             rallies = rally_result.metadata.get('rallies', [])
         
         if not games:
             # Fallback: detect games ourselves
-            from metrics_framework import GameDetector
+            from core.metrics_framework import GameDetector
             game_detector = GameDetector()
             game_result = game_detector.detect(df, context)
             num_games = game_result.value
@@ -474,7 +474,7 @@ class AccelerometerShotDetector(BaseMetricDetector):
 
 if __name__ == "__main__":
     # Test the additional detectors
-    from metrics_framework import MetricsFramework
+    from core.metrics_framework import MetricsFramework
     
     framework = MetricsFramework()
     
