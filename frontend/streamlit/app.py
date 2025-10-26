@@ -31,36 +31,115 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS - Modern Professional Dashboard
 st.markdown("""
 <style>
+    /* Import Google Font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    
+    /* Main styling */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-family: 'Inter', sans-serif;
+        font-size: 2.8rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 3rem;
+        letter-spacing: -0.02em;
     }
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #1f77b4;
+    
+    /* Apply to all Streamlit elements for a cleaner look */
+    .element-container {
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 1rem !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        margin-bottom: 1rem !important;
+        border: 1px solid #e8e8e8 !important;
     }
+    
+    .element-container:hover {
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15) !important;
+        border-color: #667eea !important;
+        transform: translateY(-1px) !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    /* Metrics value styling */
+    [data-testid="stMetricValue"],
+    div[data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        color: #1e293b !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    /* Metrics label styling */
+    [data-testid="stMetricLabel"],
+    div[data-testid="stMetricLabel"] {
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    /* Delta styling */
+    [data-testid="stMetricDelta"] {
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    /* Section headers */
+    h2 {
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: #1e293b;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 0.5rem;
+    }
+    
+    /* Subsection headers */
+    h3 {
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Warning box */
     .warning-box {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 0.5rem;
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
         padding: 1rem;
         margin: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
+    
+    /* Success box */
     .success-box {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        border-radius: 0.5rem;
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-left: 4px solid #10b981;
+        border-radius: 8px;
         padding: 1rem;
         margin: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
+    
+    /* Sidebar styling */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    }
+    
+    /* Remove Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -341,8 +420,15 @@ def get_logic_for_metric(metric_name: str) -> str:
 def display_analysis_results(analysis_data, raw_data):
     """Display the analysis results in the Streamlit interface."""
     
-    # Session Overview (formerly Key Insights)
-    st.header("📊 Session Overview")
+    # Session Analysis with professional styling
+    st.markdown("""
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 2.5rem; font-weight: 700; 
+                   color: #1e293b; margin-bottom: 0.5rem;">📊 Session Analysis</h1>
+        <div style="width: 80px; height: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                     border-radius: 2px;"></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     metrics = analysis_data['metrics']
     
@@ -351,7 +437,7 @@ def display_analysis_results(analysis_data, raw_data):
     
     # Column 1: Timings ⏱️
     with col1:
-        st.subheader("⏱️")
+        st.markdown('<div style="text-align: center; font-size: 2rem; margin-bottom: 1rem;">⏱️</div>', unsafe_allow_html=True)
         
         # Total Session Duration
         duration = analysis_data['session_summary']['total_duration_minutes']
@@ -406,7 +492,7 @@ def display_analysis_results(analysis_data, raw_data):
     
     # Column 2: Games & Rallies 🎾
     with col2:
-        st.subheader("🎾")
+        st.markdown('<div style="text-align: center; font-size: 2rem; margin-bottom: 1rem;">🎾</div>', unsafe_allow_html=True)
         
         # Total Number of Games
         games_result = metrics.get('number_of_games')
@@ -448,7 +534,7 @@ def display_analysis_results(analysis_data, raw_data):
     
     # Column 3: Heart Rate ❤️
     with col3:
-        st.subheader("❤️")
+        st.markdown('<div style="text-align: center; font-size: 2rem; margin-bottom: 1rem;">❤️</div>', unsafe_allow_html=True)
         
         # Avg Heart Rate
         avg_hr = analysis_data['session_summary'].get('avg_heart_rate', 0)
@@ -478,8 +564,15 @@ def display_analysis_results(analysis_data, raw_data):
         else:
             st.metric("Avg Rest HR", "N/A")
     
-    # Visualizations
-    st.header("📈 Performance Visualizations")
+    # Visualizations with professional styling
+    st.markdown("""
+    <div style="margin-top: 3rem; margin-bottom: 1rem;">
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 700; 
+                   color: #1e293b; margin-bottom: 0.5rem;">📈 Performance Visualizations</h1>
+        <div style="width: 80px; height: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                     border-radius: 2px;"></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Session Breakdown Charts - Side by Side
     col1, col2 = st.columns(2)
@@ -531,8 +624,15 @@ def display_analysis_results(analysis_data, raw_data):
             for field in available_fields:
                 st.write(f"• {field}")
     
-    # Detailed Analysis (expandable)
-    st.header("🔬 Detailed Analysis")
+    # Detailed Analysis with professional styling
+    st.markdown("""
+    <div style="margin-top: 3rem; margin-bottom: 1rem;">
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 700; 
+                   color: #1e293b; margin-bottom: 0.5rem;">🔬 Detailed Analysis</h1>
+        <div style="width: 80px; height: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                     border-radius: 2px;"></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Create a table showing all metrics
     metric_table_data = []
@@ -577,23 +677,61 @@ def display_analysis_results(analysis_data, raw_data):
                 st.dataframe(metadata_df, use_container_width=True, hide_index=True)
 
 def create_simple_heart_rate_chart(raw_data):
-    """Create simple heart rate over time chart without overlays."""
+    """Create professional heart rate over time chart."""
     fig = go.Figure()
     
-    # Add heart rate line
+    # Add heart rate line with gradient effect
     fig.add_trace(go.Scatter(
         x=raw_data['timestamp'],
         y=raw_data['heart_rate'],
         mode='lines',
         name='Heart Rate',
-        line=dict(color='red', width=2)
+        line=dict(
+            color='#ef4444',
+            width=3,
+            shape='spline',
+            smoothing=1.0
+        ),
+        fill='tonexty',
+        fillcolor='rgba(239, 68, 68, 0.1)'
     ))
     
+    # Add HR zones as backgrounds
+    max_hr = raw_data['heart_rate'].max() * 1.05
+    zones = [
+        (0, max_hr * 0.5, 'Zone 0', '#f3f4f6'),
+        (max_hr * 0.5, max_hr * 0.6, 'Zone 1', '#dbeafe'),
+        (max_hr * 0.6, max_hr * 0.7, 'Zone 2', '#bfdbfe'),
+        (max_hr * 0.7, max_hr * 0.8, 'Zone 3', '#93c5fd'),
+        (max_hr * 0.8, max_hr * 0.9, 'Zone 4', '#60a5fa'),
+        (max_hr * 0.9, max_hr, 'Zone 5', '#ef4444')
+    ]
+    
     fig.update_layout(
-        title="Heart Rate Over Time",
+        title={
+            'text': "Heart Rate Over Time",
+            'font': {'size': 20, 'family': 'Inter'},
+            'x': 0.5,
+            'xanchor': 'center'
+        },
         xaxis_title="Time",
         yaxis_title="Heart Rate (bpm)",
-        height=400
+        height=450,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font=dict(family='Inter', size=12),
+        hovermode='x unified',
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='#f1f5f9',
+            gridwidth=1
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='#f1f5f9',
+            gridwidth=1,
+            range=[raw_data['heart_rate'].min() * 0.9, raw_data['heart_rate'].max() * 1.1]
+        )
     )
     
     return fig
@@ -811,7 +949,7 @@ def create_confidence_chart(metrics):
     return fig
 
 def create_session_breakdown_chart(raw_data, analysis_data):
-    """Create pie chart showing session breakdown (warm-up, playing, rest, cool-down)."""
+    """Create modern session breakdown donut chart."""
     metrics = analysis_data['metrics']
     
     # Get session duration
@@ -822,75 +960,60 @@ def create_session_breakdown_chart(raw_data, analysis_data):
         total_mins = analysis_data['session_summary'].get('total_duration_minutes', 0)
     
     if total_mins <= 0:
-        # Return empty chart if no valid duration
         fig = go.Figure()
         fig.update_layout(title="No Session Data Available", height=400)
         return fig
     
-    # Get different components - lower confidence threshold for pie chart
-    # Use lower threshold to show metrics even if detection isn't perfect
+    # Get different components
     warmup_mins = metrics.get('warm_up_length')
     warmup_value = warmup_mins.value if warmup_mins and warmup_mins.value > 0 else 0
-    warmup_confidence = warmup_mins.confidence if warmup_mins else 0
     
     cooldown_mins = metrics.get('cool_down_length')
     cooldown_value = cooldown_mins.value if cooldown_mins and cooldown_mins.value > 0 else 0
-    cooldown_confidence = cooldown_mins.confidence if cooldown_mins else 0
     
     playing_mins = metrics.get('total_playing_time')
     playing_value = playing_mins.value if playing_mins and playing_mins.value > 0 else 0
-    playing_confidence = playing_mins.confidence if playing_mins else 0
     
-    # Debug: Print metrics being used
-    import logging
-    logging.debug(f"Pie Chart Debug - Total: {total_mins} min")
-    logging.debug(f"Warm-up: {warmup_value} (confidence: {warmup_confidence})")
-    logging.debug(f"Playing: {playing_value} (confidence: {playing_confidence})")
-    logging.debug(f"Cool-down: {cooldown_value} (confidence: {cooldown_confidence})")
-    
-    # Calculate rest time as remainder to ensure pie chart adds up to 100%
-    # This is more reliable than using the rest detector
+    # Calculate rest time as remainder
     accounted_time = warmup_value + playing_value + cooldown_value
     rest_value = max(0, total_mins - accounted_time)
     
-    logging.debug(f"Rest (calculated): {rest_value} min")
-    logging.debug(f"Accounted time: {accounted_time} min")
-    
-    # Prepare data for pie chart (only include components with value > 0)
+    # Prepare data
     labels = []
     values = []
     colors = []
     
-    # Define colors and order
     components = [
-        ('Warm-up', warmup_value, '#4A90E2'),      # Blue
-        ('Playing Time', playing_value, '#E74C3C'), # Red
-        ('Rest', rest_value, '#2ECC71'),            # Green
-        ('Cool-down', cooldown_value, '#95A5A6')    # Grey
+        ('Warm-up', warmup_value, '#6366f1'),      # Indigo
+        ('Playing Time', playing_value, '#ef4444'), # Red
+        ('Rest', rest_value, '#10b981'),            # Green
+        ('Cool-down', cooldown_value, '#6b7280')    # Grey
     ]
     
     for label, value, color in components:
         if value > 0:
-            labels.append(f'{label}\n{format_time_duration(value)}')
+            labels.append(f'{label}<br>{format_time_duration(value)}')
             values.append(value)
             colors.append(color)
     
-    # Fallback if no components detected
     if not values:
-        labels = [f'Full Session\n{format_time_duration(total_mins)}']
+        labels = [f'Full Session<br>{format_time_duration(total_mins)}']
         values = [total_mins]
-        colors = ['#8B9DC3']
+        colors = ['#8b5cf6']
     
-    # Create pie chart with better formatting
+    # Create modern donut chart
     fig = go.Figure(data=[go.Pie(
         labels=labels,
         values=values,
         marker_colors=colors,
-        textinfo='percent',
+        textinfo='label+percent',
         textposition='outside',
-        textfont_size=12,
-        hole=0.3,  # Make it a donut chart
-        hovertemplate='<b>%{label}</b><br>Duration: %{customdata}<extra></extra>',
+        textfont_size=11,
+        hole=0.4,
+        marker=dict(
+            line=dict(color='#ffffff', width=3)
+        ),
+        hovertemplate='<b>%{label}</b><br>Duration: %{customdata}<br>Percentage: %{percent}<extra></extra>',
         customdata=[format_time_duration(v) for v in values]
     )])
     
@@ -898,8 +1021,8 @@ def create_session_breakdown_chart(raw_data, analysis_data):
         title={
             'text': "Session Breakdown",
             'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 18}
+            'font': {'size': 18, 'family': 'Inter'},
+            'xanchor': 'center'
         },
         height=450,
         showlegend=True,
@@ -908,15 +1031,20 @@ def create_session_breakdown_chart(raw_data, analysis_data):
             yanchor="middle",
             y=0.5,
             xanchor="left",
-            x=1.05
+            x=1.1,
+            font=dict(family='Inter', size=11)
         ),
+        font=dict(family='Inter'),
+        plot_bgcolor='white',
+        paper_bgcolor='white',
         annotations=[
             dict(
-                text=f'Total: {format_time_duration(total_mins)}',
+                text=f'<b>{format_time_duration(total_mins)}</b>',
                 x=0.5,
                 y=0.5,
-                font_size=14,
-                showarrow=False
+                font_size=16,
+                showarrow=False,
+                font_family='Inter'
             )
         ]
     )
