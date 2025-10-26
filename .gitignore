@@ -51,6 +51,10 @@ temp_file.*
 sample_data/
 user_sessions/
 
+# Allow test data files
+!tests/*.gpx
+!tests/*.fit
+
 # Database
 *.db
 *.sqlite
