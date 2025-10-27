@@ -30,7 +30,12 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
 
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: str = "http://localhost:3000,http://localhost:19006"
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Parse CORS origins from comma-separated string"""
+        return [origin.strip() for origin in self.cors_origins.split(",")]
 
     class Config:
         env_file = ".env"

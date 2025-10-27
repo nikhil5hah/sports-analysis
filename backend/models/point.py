@@ -31,7 +31,7 @@ class Point(Base):
     hr_at_point_end = Column(Float)
 
     # Optional: Was this a let?
-    is_let = Column(String, default=False)
+    is_let = Column(String, default="false")
 
     # Optional notes
     notes = Column(String)

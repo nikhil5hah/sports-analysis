@@ -2,7 +2,7 @@
 Sensor Data model - Stores batched accelerometer/gyroscope data
 For future ML training
 """
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, LargeBinary
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
