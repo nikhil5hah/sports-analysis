@@ -50,6 +50,10 @@ class Session(Base):
     hr_data = relationship("HeartRateData", back_populates="session", cascade="all, delete-orphan")
     sensor_batches = relationship("SensorDataBatch", back_populates="session", cascade="all, delete-orphan")
     insights = relationship("Insight", back_populates="session", cascade="all, delete-orphan")
+    gps_data = relationship("GPSData", back_populates="session", cascade="all, delete-orphan")
+    spo2_data = relationship("SpO2Data", back_populates="session", cascade="all, delete-orphan")
+    temperature_data = relationship("TemperatureData", back_populates="session", cascade="all, delete-orphan")
+    activity_data = relationship("ActivityData", back_populates="session", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Session {self.session_id} - {self.session_type}>"

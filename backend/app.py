@@ -12,8 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.models.database import init_db
 
-# Import API routers (we'll create these next)
-# from backend.api import auth, sessions, points, insights, users
+# Import API routers
+from backend.api import auth, sessions, points, heart_rate, sensor_data, insights, gps, spo2, temperature, activity
 
 app = FastAPI(
     title="Squash Analytics API",
@@ -59,12 +59,17 @@ async def health_check():
     }
 
 
-# Include API routers (we'll add these next)
-# app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-# app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
-# app.include_router(points.router, prefix="/api/points", tags=["Points"])
-# app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
-# app.include_router(users.router, prefix="/api/users", tags=["Users"])
+# Include API routers
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
+app.include_router(points.router, prefix="/api", tags=["Points"])
+app.include_router(heart_rate.router, prefix="/api", tags=["Heart Rate"])
+app.include_router(sensor_data.router, prefix="/api", tags=["Sensor Data"])
+app.include_router(insights.router, prefix="/api", tags=["Insights"])
+app.include_router(gps.router, prefix="/api", tags=["GPS"])
+app.include_router(spo2.router, prefix="/api", tags=["SpO2"])
+app.include_router(temperature.router, prefix="/api", tags=["Temperature"])
+app.include_router(activity.router, prefix="/api", tags=["Activity"])
 
 
 if __name__ == "__main__":

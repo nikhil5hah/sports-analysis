@@ -1,79 +1,221 @@
 # Sports Performance Analysis Platform
 
-A comprehensive dashboard for analyzing squash performance data using fitness tracker data (GPX/FIT files).
+A comprehensive platform for analyzing squash performance with real-time smartwatch data capture, backend API, and analytics dashboard.
 
-## Features
+## Overview
 
-- 📊 **Session Analysis**: Total time, warm-up, playing time, rest
-- 🎾 **Games & Rallies**: Detect games, rallies, and shots
-- ❤️ **Heart Rate Tracking**: Analyze HR zones and patterns
-- 📈 **Visualizations**: Interactive charts and graphs
-- 🔧 **Modular Metrics Framework**: Easy to extend
+This platform combines:
+- **Backend API** for real-time data collection from smartwatches
+- **Mobile app integration** (coming next) for iOS/Android
+- **Analytics dashboard** for visualizing performance metrics
+- **Smartwatch support** for comprehensive biometric tracking
 
-## Getting Started
+## Architecture
 
-### Installation
+```
+┌─────────────────────┐
+│   Mobile App        │  (Next: iOS/Android)
+│   + Smartwatch      │
+└──────────┬──────────┘
+           │ REST API
+           ↓
+┌─────────────────────┐
+│  FastAPI Backend    │  ✅ COMPLETE
+│  localhost:8000     │
+└──────────┬──────────┘
+           │ PostgreSQL
+           ↓
+┌─────────────────────┐
+│  Supabase Database  │  ✅ CONFIGURED
+│  (Cloud)            │
+└─────────────────────┘
+```
+
+## Current Status
+
+### ✅ Backend API (COMPLETE)
+Fully functional REST API with comprehensive smartwatch data support:
+
+**Authentication:**
+- User registration and login
+- JWT token-based authentication
+
+**Session Management:**
+- Create/update/delete training sessions and matches
+- Track sport type, scoring system, duration
+- Real-time session status
+
+**Sensor Data Capture:**
+- ❤️ Heart Rate monitoring with HR zones
+- 📍 GPS/Location tracking (lat/long, altitude, speed, bearing)
+- 🫁 SpO2 (blood oxygen saturation)
+- 🌡️ Skin temperature monitoring
+- 👟 Activity metrics (steps, calories, distance, active minutes, floors)
+- 📱 Accelerometer/Gyroscope data for movement analysis
+
+**Analytics:**
+- Point-by-point score tracking
+- Automated insight generation
+- HR-score correlation analysis
+
+### 🚧 Next Steps: Mobile & Watch Apps
+See `docs/MOBILE_APP_PLAN.md` for detailed implementation plan
+
+### 📊 Analytics Dashboard
+Streamlit dashboard available for data visualization (can be updated to use new API)
+
+## Quick Start
+
+### Backend Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/nikhil5hah/sports-analysis.git
-cd sports-analysis
+# Navigate to backend
+cd backend
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your Supabase credentials
+
+# Run the server
+python app.py
 ```
 
-### Running Locally
+Server runs at: `http://localhost:8000`
+API Documentation: `http://localhost:8000/docs`
+
+### Streamlit Dashboard
 
 ```bash
-# Run the Streamlit app
+# Run the dashboard
 streamlit run frontend/streamlit/app.py
 ```
 
-The app will be available at `http://localhost:8501`
+Dashboard runs at: `http://localhost:8501`
 
-### Deploy to Streamlit Cloud
+## API Endpoints
 
-1. Push your code to GitHub
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Sign in with your GitHub account
-4. Click "New app"
-5. Select your repository: `nikhil5hah/sports-analysis`
-6. Main file path: `frontend/streamlit/app.py`
-7. Click "Deploy!"
+**Authentication:**
+- `POST /api/auth/register` - Create new user
+- `POST /api/auth/login` - Get JWT token
+- `GET /api/auth/me` - Get current user
 
-Your app will be live at `https://your-app-name.streamlit.app`
+**Sessions:**
+- `POST /api/sessions` - Create session
+- `GET /api/sessions` - List all sessions
+- `GET /api/sessions/{id}` - Get session details
+- `PUT /api/sessions/{id}` - Update session
+- `DELETE /api/sessions/{id}` - Delete session
 
-## Tech Stack
+**Sensor Data:**
+- `POST /api/sessions/{id}/heart-rate` - Upload heart rate data
+- `POST /api/sessions/{id}/gps` - Upload GPS/location data
+- `POST /api/sessions/{id}/spo2` - Upload blood oxygen data
+- `POST /api/sessions/{id}/temperature` - Upload temperature data
+- `POST /api/sessions/{id}/activity` - Upload activity metrics
+- `POST /api/sessions/{id}/sensor-data` - Upload accelerometer/gyroscope
 
-- **Backend**: Python, Pandas, NumPy
-- **Frontend**: Streamlit
-- **Visualization**: Plotly
-- **Data Processing**: Custom modular framework
+**Analytics:**
+- `POST /api/sessions/{id}/points` - Record match points
+- `POST /api/sessions/{id}/insights` - Generate insights
+- `GET /api/sessions/{id}/insights` - Get session insights
+
+See `docs/API.md` for complete API documentation.
 
 ## Project Structure
 
 ```
 sports-analysis/
-├── frontend/streamlit/
-│   └── app.py                 # Main Streamlit dashboard
-├── core/
-│   ├── metrics_framework.py  # Modular metrics system
-│   └── modular_analysis.py   # Session analysis engine
-├── data/
-│   └── ingestion/
-│       └── data_ingestion.py # GPX/FIT file processing
-└── sports/squash/
-    └── detectors/             # Sport-specific metric detectors
+├── backend/                   # FastAPI backend (COMPLETE)
+│   ├── app.py                # Application entry point
+│   ├── config.py             # Configuration
+│   ├── models/               # Database models
+│   │   ├── user.py
+│   │   ├── session.py
+│   │   ├── point.py
+│   │   ├── heart_rate_data.py
+│   │   ├── gps_data.py
+│   │   ├── spo2_data.py
+│   │   ├── temperature_data.py
+│   │   ├── activity_data.py
+│   │   ├── sensor_data.py
+│   │   └── insight.py
+│   └── api/                  # API endpoints
+│       ├── auth.py
+│       ├── sessions.py
+│       ├── points.py
+│       ├── heart_rate.py
+│       ├── gps.py
+│       ├── spo2.py
+│       ├── temperature.py
+│       ├── activity.py
+│       ├── sensor_data.py
+│       └── insights.py
+├── frontend/streamlit/        # Analytics dashboard
+│   └── app.py
+├── core/                      # Analysis engine
+│   ├── metrics_framework.py
+│   └── modular_analysis.py
+├── data/ingestion/            # Data processing
+│   └── data_ingestion.py
+├── sports/squash/             # Sport-specific detectors
+│   └── detectors/
+└── docs/                      # Documentation
+    ├── API.md                # API reference
+    └── MOBILE_APP_PLAN.md    # Mobile development guide
 ```
 
-## Usage
+## Tech Stack
 
-1. Upload a GPX or FIT file from your fitness tracker
-2. Select watch position and session type
-3. View comprehensive session analysis
-4. Explore detailed metrics and visualizations
+**Backend:**
+- FastAPI (REST API)
+- SQLAlchemy (ORM)
+- PostgreSQL (Supabase)
+- JWT authentication
+- Pydantic validation
+
+**Frontend:**
+- Streamlit (dashboard)
+- Plotly (visualizations)
+
+**Mobile (Coming Next):**
+- React Native or Flutter
+- Apple Watch / Wear OS integration
+
+## Development
+
+### Testing the API
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Create user
+curl -X POST http://localhost:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"test123","full_name":"Test User"}'
+
+# Visit interactive docs
+open http://localhost:8000/docs
+```
+
+### Database
+
+The database schema is automatically created on first run. All tables are hosted on Supabase (cloud PostgreSQL).
+
+### Next Development Phase
+
+Ready to build mobile apps! See `docs/MOBILE_APP_PLAN.md` for:
+- iOS/Android app architecture
+- Smartwatch integration guide
+- Step-by-step implementation plan
+
+## Contributing
+
+This is a personal project for squash performance analysis. Contributions welcome!
 
 ## License
 
-MIT License
+Non-Commercial License - See LICENSE file
