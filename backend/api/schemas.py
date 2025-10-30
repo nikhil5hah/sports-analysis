@@ -66,15 +66,22 @@ class SessionResponse(BaseModel):
     session_type: str
     sport: str
     scoring_system: str
-    status: str
     start_time: datetime
-    end_time: Optional[datetime]
-    opponent_name: Optional[str]
-    location: Optional[str]
-    final_score_me: Optional[int]
-    final_score_opponent: Optional[int]
-    total_lets: int
-    notes: Optional[str]
+    end_time: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
+    metadata_: Optional[dict] = None
+    final_score_me: Optional[int] = None
+    final_score_opponent: Optional[int] = None
+    total_games: Optional[int] = None
+    total_points: Optional[int] = None
+    total_rallies: Optional[int] = None
+    total_lets: Optional[int] = None
+    avg_hr: Optional[float] = None
+    max_hr: Optional[float] = None
+    sync_status: Optional[str] = None
+    last_synced_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -40,8 +40,8 @@ async def upload_heart_rate_data(
     hr_records = [
         HeartRateData(
             session_id=session_id,
-            timestamp=data_point.timestamp,
-            bpm=data_point.bpm
+            time=data_point.timestamp,
+            heart_rate=data_point.bpm
         )
         for data_point in hr_data.data_points
     ]
@@ -76,6 +76,6 @@ async def get_heart_rate_data(
 
     hr_data = db.query(HeartRateData).filter(
         HeartRateData.session_id == session_id
-    ).order_by(HeartRateData.timestamp).all()
+    ).order_by(HeartRateData.time).all()
 
     return hr_data

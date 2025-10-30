@@ -23,15 +23,20 @@ async def create_session(
     db: Session = Depends(get_db)
 ):
     """Create a new training/match session"""
+    # Build metadata from optional fields
+    metadata = {}
+    if session_data.opponent_name:
+        metadata["opponent_name"] = session_data.opponent_name
+    if session_data.location:
+        metadata["location"] = session_data.location
+
     new_session = SessionModel(
         user_id=current_user.user_id,
         session_type=session_data.session_type,
         sport=session_data.sport,
         scoring_system=session_data.scoring_system,
-        opponent_name=session_data.opponent_name,
-        location=session_data.location,
         start_time=datetime.utcnow(),
-        status="in_progress"
+        metadata_=metadata if metadata else None
     )
 
     db.add(new_session)
