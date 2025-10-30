@@ -37,7 +37,7 @@ async def record_point(
             detail="Session not found"
         )
 
-    if session.status == "completed":
+    if session.end_time is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot add points to a completed session"
@@ -101,3 +101,43 @@ async def get_session_points(
     ).order_by(Point.point_number).all()
 
     return points
+
+
+@router.delete("/sessions/{session_id}/points/last", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_last_point(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete the last point recorded (undo)"""
+    # Verify session exists and belongs to user
+    session = db.query(SessionModel).filter(
+        SessionModel.session_id == session_id,
+        SessionModel.user_id == current_user.user_id
+    ).first()
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+
+    # Get the last point
+    last_point = db.query(Point).filter(
+        Point.session_id == session_id
+    ).order_by(Point.point_number.desc()).first()
+
+    if not last_point:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No points to undo"
+        )
+
+    # If the point was a let, decrement total_lets
+    if last_point.is_let == "true":
+        session.total_lets = max((session.total_lets or 0) - 1, 0)
+
+    db.delete(last_point)
+    db.commit()
+
+    return None

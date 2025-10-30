@@ -1,8 +1,8 @@
 # 📊 Project Status - Sports Analytics Platform
 
-> **Last Updated**: October 29, 2024
-> **Current Phase**: Backend Complete → Ready for Mobile App Development
-> **Next Session**: Build iOS/Android mobile app with smartwatch integration
+> **Last Updated**: October 30, 2024 (Afternoon Session - Phase 4)
+> **Current Phase**: Mobile App Development - Phase 4 Complete (Score Tracking)
+> **Next Session**: Phase 5 - Insights & Analytics / Documentation Updates
 
 ---
 
@@ -10,11 +10,19 @@
 
 **Goal**: Build a comprehensive sports performance analysis platform for squash (and other sports) that captures real-time smartwatch data during matches/training and provides detailed analytics.
 
-**Current Status**: ✅ Backend API complete and operational. Ready to build mobile apps.
+**Core Innovation - Dual-Mode Scoring**:
+The app uniquely supports both **Player Mode** (watch-controlled scoring during play) and **Referee Mode** (phone-controlled scoring by a referee/coach), making it suitable for:
+- **Casual play**: Player wears watch, tracks own score hands-free
+- **Competitive matches**: Referee uses phone for accurate scoring while player wears watch for biometrics
+- **Hybrid mode**: Both devices active, referee score is authoritative
+
+This dual approach provides professional-grade scoring flexibility while maintaining comprehensive data collection for post-match analysis.
+
+**Current Status**: ✅ Backend API complete. ✅ Mobile app Phases 1-4 complete! (Auth, Sessions, Score Tracking)
 
 **Timeline**:
 - Week 1-2: Backend API ✅ **COMPLETE**
-- Week 3-6: Mobile app + smartwatch integration 🚧 **NEXT**
+- Week 3-6: Mobile app + smartwatch integration 🚧 **IN PROGRESS** (Phases 1-4 complete)
 - Week 7+: Advanced analytics, deployment
 
 ---
@@ -91,29 +99,88 @@
 - ✅ Comprehensive error handling
 - ✅ Interactive API documentation (Swagger)
 
+### 5. Mobile App - Phase 1 (Authentication) ✅ COMPLETE
+**Location**: `mobile/`
+**Status**: Running at `http://localhost:8081` (Expo web)
+**Technology**: React Native + Expo
+
+**Features Built**:
+- ✅ Project setup with Expo and React Native
+- ✅ API client with authentication endpoints
+- ✅ JWT token management with AsyncStorage
+- ✅ Auto-login on app restart
+- ✅ Login screen with validation
+- ✅ Registration screen with full validation
+- ✅ Home screen (placeholder for Phase 2)
+- ✅ Navigation with auth flow (conditional rendering)
+- ✅ CORS configuration for web testing
+- ✅ Error handling and user feedback
+
+**Files Created**:
+- `mobile/src/api/client.js` - API client with auth + session endpoints
+- `mobile/src/screens/LoginScreen.js` - Login UI
+- `mobile/src/screens/RegisterScreen.js` - Registration UI
+- `mobile/src/screens/HomeScreen.js` - Home screen after login
+- `mobile/src/navigation/AppNavigator.js` - Navigation with auth flow
+- `mobile/README.md` - Complete setup and testing guide
+
+**Testing**: Successfully tested with test account (test@squash.com) on web browser
+
+### 6. Mobile App - Phase 2 (Session Management) ✅ COMPLETE
+**Features Built**:
+- ✅ Session creation screen with form validation
+- ✅ Session list view with pull-to-refresh
+- ✅ Active session screen with live timer
+- ✅ Session details view with delete functionality
+- ✅ Session status tracking (active/completed)
+- ✅ Duration calculation and display
+- ✅ Support for multiple session types (match/training)
+- ✅ Support for multiple sports (squash, tennis, badminton, table tennis, padel)
+- ✅ Scoring system selection (American/PARS, English)
+
+**Files Created/Updated**:
+- `mobile/src/screens/SessionCreateScreen.js` - Form to create new sessions
+- `mobile/src/screens/SessionListScreen.js` - List all sessions with refresh
+- `mobile/src/screens/ActiveSessionScreen.js` - Live session tracking with timer
+- `mobile/src/screens/SessionDetailsScreen.js` - View completed session details
+
+**Testing**: All session CRUD operations working correctly
+
+### 7. Mobile App - Phase 4 (Score Tracking) ✅ COMPLETE
+**Features Built**:
+- ✅ Point-by-point score recording (Me/Opponent/Let buttons)
+- ✅ Real-time score display during matches
+- ✅ Game number tracking (Game 1, Game 2, etc.)
+- ✅ "Next Game" button to advance between games
+- ✅ Undo last point functionality
+- ✅ Automatic final score calculation on session end
+- ✅ Game-by-game score storage (e.g., "11-4 11-3 4-11 12-9")
+- ✅ Match result display (games won: 3-1)
+- ✅ Score display in session details view
+- ✅ Score display in session list view
+- ✅ Metadata storage for detailed game scores
+
+**Updated Files**:
+- `mobile/src/screens/ActiveSessionScreen.js` - Added full score tracking UI
+- `mobile/src/screens/SessionDetailsScreen.js` - Display final scores and game details
+- `mobile/src/screens/SessionListScreen.js` - Show match results in list
+- `mobile/src/api/client.js` - Added points API methods (recordPoint, getPoints, undoLastPoint)
+- `backend/api/points.py` - Fixed session.status bug (changed to end_time check)
+
+**Testing**: Successfully tracked complete matches with multiple games, undo functionality, and proper score calculation
+
 ---
 
 ## 🚧 In Progress / Next Steps
 
-### Phase 1: Mobile App Setup (Week 3, Days 1-2)
-**Technology Decision**: React Native with Expo (recommended)
-**Alternative**: Flutter or Native (Swift + Kotlin)
+### Phase 1: Mobile App Setup ✅ **COMPLETE**
+All authentication features working! Users can register, login, and auto-login.
 
-**Tasks**:
-1. Install Expo CLI and create project
-2. Set up navigation structure
-3. Create API client (connects to `http://localhost:8000`)
-4. Build authentication screens (login, register)
-5. Test auth flow end-to-end
+### Phase 2: Session Management ✅ **COMPLETE**
+All session management features complete! Users can create, view, track, and end sessions.
 
-**Reference**: `docs/MOBILE_APP_PLAN.md` - Phase 1
-
-### Phase 2: Session Management (Week 3, Days 3-5)
-**Tasks**:
-1. Session creation form
-2. Session list view
-3. Active session screen (start/stop timer)
-4. Session details view
+### Phase 4: Score Tracking ✅ **COMPLETE**
+Full point-by-point score tracking with game management and final score calculation complete!
 
 ### Phase 3: Smartwatch Integration (Week 4)
 **iOS - HealthKit**:
@@ -129,11 +196,18 @@
 
 **Reference**: `docs/MOBILE_APP_PLAN.md` - Phase 3 (detailed code examples)
 
-### Phase 4-7: Additional Features (Weeks 5-6)
-- Score tracking UI
-- Analytics dashboard in app
+### Phase 5: Insights & Analytics Dashboard (Week 5) 🚧 **NEXT**
+**Tasks**:
+- Create analytics dashboard screen
+- Display session performance metrics
+- Show heart rate charts (when available)
+- Show score patterns and trends
+- Add session comparison features
+
+### Phase 6-7: Additional Features (Week 6)
 - Apple Watch companion app
 - Testing and polish
+- Real device testing
 
 ---
 
@@ -179,6 +253,23 @@ sports-analysis/
 ├── data/ingestion/            # FIT file processing (unchanged)
 ├── sports/squash/             # Sport-specific detectors (unchanged)
 ├── frontend/streamlit/        # Dashboard (for testing)
+├── mobile/                    # ✅ React Native mobile app (Phases 1,2,4 complete)
+│   ├── App.js                # App entry point
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── client.js     # API client with auth + sessions + points
+│   │   ├── screens/
+│   │   │   ├── LoginScreen.js           # Phase 1
+│   │   │   ├── RegisterScreen.js        # Phase 1
+│   │   │   ├── HomeScreen.js            # Phase 1
+│   │   │   ├── SessionCreateScreen.js   # Phase 2
+│   │   │   ├── SessionListScreen.js     # Phase 2
+│   │   │   ├── ActiveSessionScreen.js   # Phase 2+4 (w/ score tracking)
+│   │   │   └── SessionDetailsScreen.js  # Phase 2+4 (w/ scores)
+│   │   └── navigation/
+│   │       └── AppNavigator.js
+│   ├── package.json
+│   └── README.md
 ├── docs/                      # Documentation
 │   ├── API.md
 │   ├── MOBILE_APP_PLAN.md
@@ -238,7 +329,8 @@ Will use:
 
 ### Scope Decisions
 - ✅ Multi-sport support (squash primary, extensible)
-- ✅ Manual score tracking (not automated)
+- ✅ Dual-mode scoring: Player Mode (watch) + Referee Mode (phone)
+- ✅ Manual score tracking with watch/phone (not automated)
 - ✅ American/PARS scoring first, English scoring later
 - ✅ Local backend for testing, cloud deployment later
 - ✅ Focus on data collection first, ML later (v2)
@@ -253,6 +345,45 @@ Will use:
 3. **No background jobs** - Insights generation is synchronous (add Celery later)
 4. **No video integration** - Planned for future
 5. **No social features** - Planned for future
+
+### Critical Mobile App Issue (Unresolved)
+**Problem**: Android app fails to load on Pixel phone via Expo Go with error:
+```
+java.lang.string cannot be cast to java.lang.Boolean
+```
+
+**What We Tried**:
+1. ✅ Removed `newArchEnabled: true` from app.json
+2. ✅ Removed `edgeToEdgeEnabled: true` from app.json Android config
+3. ✅ Added Android package name to app.json
+4. ✅ Cleared Expo Go app data and cache on phone
+5. ✅ Reinstalled Expo Go app
+6. ✅ Ran `npx expo start --clear` to clear Metro bundler cache
+7. ✅ Deleted `.expo` and `node_modules/.cache` directories
+8. ✅ Removed all `cursor: 'pointer'` CSS properties from StyleSheets (web-only property)
+9. ✅ Restarted Expo server multiple times
+10. ✅ Integrated Logo.png image to replace text branding
+11. ✅ Updated app branding from "Tracket" to "TRacket"
+
+**Current Status**:
+- ❌ Error persists on Android (Pixel phone)
+- ✅ Web version works correctly at http://localhost:8081
+- Backend running at http://192.168.1.35:8000
+
+**Next Steps to Try**:
+1. Check for other web-specific CSS properties in StyleSheets (userSelect, WebkitOverflowScrolling, etc.)
+2. Examine exact error stack trace in Expo server output
+3. Consider downgrading `react-native-screens` from 4.18.0 to ~4.16.0 (version mismatch warning)
+4. Try creating minimal test app to isolate the issue
+5. Check if issue is specific to Expo Go vs development build
+
+**Files Modified During Troubleshooting**:
+- `/mobile/app.json` - Removed problematic configs
+- `/mobile/src/screens/*.js` - Removed cursor: 'pointer' styles
+- `/mobile/assets/logo.png` - Added logo image
+- `/mobile/src/screens/LoginScreen.js` - Added logo, removed text branding
+- `/mobile/src/screens/HomeScreen.js` - Added logo, removed text branding
+- `/mobile/src/screens/RegisterScreen.js` - Updated branding text
 
 ### Troubleshooting Guide
 
@@ -338,13 +469,13 @@ Add features like:
 - [x] Push to GitHub
 
 **Week 3-4**: Mobile App + Smartwatch
-- [ ] React Native project setup
-- [ ] Authentication UI
-- [ ] Session management UI
+- [x] React Native project setup
+- [x] Authentication UI
+- [x] Session management UI
+- [x] Score tracking UI
 - [ ] HealthKit integration (iOS)
 - [ ] Google Fit integration (Android)
 - [ ] Real-time sensor streaming
-- [ ] Score tracking UI
 
 **Week 5-6**: Analytics + Polish
 - [ ] Analytics dashboard in app
@@ -414,36 +545,42 @@ When you say "read PROJECT_STATUS.md", Claude will understand:
 
 ## 📝 Last Session Summary
 
-**Date**: October 30, 2024
+**Date**: October 30, 2024 (Evening Session - Android Expo Go Troubleshooting + Branding Update)
 
-**Completed**:
-- ✅ Set up local network access for backend (http://192.168.1.35:8000)
-- ✅ Discovered and fixed 5 critical API bugs through end-to-end testing:
-  - Fixed bcrypt/passlib compatibility issue (switched to direct bcrypt)
-  - Fixed User model field mismatch (password_hash → hashed_password)
-  - Fixed Session model field mismatch (individual fields → metadata_ JSON)
-  - Fixed SessionResponse schema to match actual Session model
-  - Fixed HeartRateData field names (timestamp → time, bpm → heart_rate)
-- ✅ Successfully validated full backend flow:
-  - Created test user (test@squash.com)
-  - Generated JWT token (30-day expiration working)
-  - Created test session (cb6d112d-2f09-4e11-a2d2-ca96e8d22a07)
-  - Uploaded heart rate data (3 sample records)
-- ✅ Committed all fixes to git
-- ✅ Pushed changes to GitHub
+**Attempted**:
+- ❌ Fix persistent Android Expo Go error: "java.lang.string cannot be cast to java.lang.Boolean"
+  - Removed problematic app.json configs (newArchEnabled, edgeToEdgeEnabled)
+  - Cleared all caches (Expo Go, Metro bundler, .expo, node_modules/.cache)
+  - Removed web-specific CSS property `cursor: 'pointer'` from all screen files
+  - Multiple attempts with different approaches - error persists
+- ✅ Integrated Logo.png into mobile app:
+  - Copied Logo.png to mobile/assets/logo.png
+  - Updated LoginScreen to display logo instead of "TRacket" text
+  - Updated HomeScreen to display logo instead of "TRacket" text
+  - Added proper Image components with 200x80 sizing
+- ✅ Updated app branding from "Tracket" to "TRacket" (capital R):
+  - Updated all screen titles and navigation
+  - Updated RegisterScreen subtitle
 
-**Time Spent**: ~1-2 hours (bug fixes and validation)
+**Time Spent**: ~2 hours (troubleshooting Android issue)
 
-**Next Session Goal**: Start mobile app development (Phase 1 - Setup and Authentication)
+**Current Status**:
+- ❌ Android/Pixel testing blocked by persistent boolean casting error
+- ✅ Web version working correctly at http://localhost:8081
+- ✅ Backend running at http://192.168.1.35:8000
+- ✅ Logo integration complete
+- ✅ Branding updated
 
-**Status**: ✅ Backend fully tested and validated. All critical bugs fixed. Ready for mobile app development.
+**Next Session Goal**:
+1. **Priority 1**: Resolve Android Expo Go issue (check for more web-specific CSS properties, examine stack trace, try development build instead of Expo Go)
+2. **Priority 2**: Once mobile works - Phase 5 (Analytics Dashboard) OR Phase 3 (Smartwatch Integration)
 
-**Previous Session (October 29, 2024)**:
-- Built complete backend API with all smartwatch sensor endpoints
-- Added GPS, SpO2, temperature, and activity data models
-- Created comprehensive API documentation
-- Created mobile app development plan
+**Previous Sessions**:
+- **October 30 (Afternoon)**: Phase 4 - Score Tracking complete
+- **October 30 (Evening)**: Phase 1 - Authentication complete
+- **October 30 (Morning)**: Backend testing and bug fixes
+- **October 29**: Backend API development with smartwatch sensors
 
 ---
 
-**You're crushing it! 🎉** Backend completed in 1 session instead of planned 2 weeks. Mobile app next!
+**Awesome progress! 🎉** Backend + Mobile Phases 1,2,4 complete! App is becoming fully functional with auth, sessions, and score tracking!

@@ -245,21 +245,82 @@ App runs at: `http://localhost:8501` (or available port)
 
 ---
 
+## Mobile App Development (TRacket)
+
+### Completed Phases
+- ✅ **Phase 1**: Authentication (Login/Register screens, JWT, auto-login)
+- ✅ **Phase 2**: Session Management (Create, List, Details, Active tracking)
+- ✅ **Phase 4**: Score Tracking (Point-by-point scoring, game management, final scores)
+- ⚠️ **Phase 5**: Analytics Dashboard (partially complete - AnalyticsScreen exists)
+
+### Technology Stack
+- React Native + Expo
+- Running on http://localhost:8081 (web)
+- Backend API at http://192.168.1.35:8000
+- AsyncStorage for JWT tokens
+
+### Current Mobile App Issue (CRITICAL - UNRESOLVED)
+**Problem**: Android app fails to load on Pixel phone via Expo Go
+**Error**: `java.lang.string cannot be cast to java.lang.Boolean`
+
+**Troubleshooting Attempts (All Failed)**:
+1. Removed `newArchEnabled` and `edgeToEdgeEnabled` from app.json
+2. Cleared all caches (Expo Go, Metro, .expo, node_modules)
+3. Removed `cursor: 'pointer'` web-specific CSS properties
+4. Multiple server restarts with cache clearing
+5. Reinstalled Expo Go app
+
+**Status**:
+- ❌ Android testing blocked
+- ✅ Web version works correctly
+- ✅ Logo integration complete (TRacket branding)
+
+**Next Steps**:
+1. Check for other web-specific CSS properties
+2. Examine full error stack trace
+3. Try development build instead of Expo Go
+4. Consider downgrading react-native-screens
+
+### Mobile App File Structure
+```
+mobile/
+├── App.js
+├── app.json (updated - removed problematic configs)
+├── assets/
+│   └── logo.png (added)
+├── src/
+│   ├── api/
+│   │   └── client.js (auth, sessions, points)
+│   ├── screens/
+│   │   ├── LoginScreen.js (with logo)
+│   │   ├── RegisterScreen.js
+│   │   ├── HomeScreen.js (with logo)
+│   │   ├── SessionCreateScreen.js
+│   │   ├── SessionListScreen.js
+│   │   ├── ActiveSessionScreen.js (with score tracking)
+│   │   ├── SessionDetailsScreen.js (with scores)
+│   │   └── AnalyticsScreen.js
+│   └── navigation/
+│       └── AppNavigator.js
+```
+
 ## Recent Session Summary
 
-**Last Session Focus**: Documentation and UI improvements
+**Last Session Focus**: Android troubleshooting + Mobile app branding
 
 **Changes Made**:
-- Comprehensive rewrite of metrics definitions document
-- Simplified quick start guide (136 lines → 28 lines)
-- Created consolidated AI context file (this file)
-- All changes pushed to GitHub
+- ❌ Attempted to fix Android Expo Go error (multiple approaches, still unresolved)
+- ✅ Integrated Logo.png into mobile app (LoginScreen, HomeScreen)
+- ✅ Updated branding from "Tracket" to "TRacket" throughout app
+- ✅ Removed web-specific CSS properties from all screen files
 
 **Current State**:
-- ✅ Repository is clean and up to date
-- ✅ Documentation is comprehensive and organized
-- ✅ UI improvements implemented
-- ⚠️ Rally detection and related metrics still need improvement
+- ✅ Backend API fully functional (all phases complete)
+- ✅ Mobile app Phases 1,2,4 complete on web
+- ❌ Mobile app blocked on Android (Expo Go error)
+- ✅ Documentation up to date
+- ✅ Streamlit analytics dashboard working
+- ⚠️ Rally detection still needs improvement (in analytics engine)
 
 ---
 

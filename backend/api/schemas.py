@@ -31,7 +31,7 @@ class Token(BaseModel):
 class UserResponse(BaseModel):
     user_id: UUID
     email: str
-    full_name: str
+    name: str
     max_heart_rate: Optional[int]
     created_at: datetime
 
