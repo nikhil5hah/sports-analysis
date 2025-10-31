@@ -50,7 +50,6 @@ class ApiClient {
     try {
       return await AsyncStorage.getItem(TOKEN_KEY);
     } catch (error) {
-      console.error('Error getting token:', error);
       return null;
     }
   }
@@ -59,7 +58,7 @@ class ApiClient {
     try {
       await AsyncStorage.setItem(TOKEN_KEY, token);
     } catch (error) {
-      console.error('Error setting token:', error);
+      // Error setting token - silently fail
     }
   }
 
@@ -68,7 +67,6 @@ class ApiClient {
       const userJson = await AsyncStorage.getItem(USER_KEY);
       return userJson ? JSON.parse(userJson) : null;
     } catch (error) {
-      console.error('Error getting user:', error);
       return null;
     }
   }
@@ -77,7 +75,7 @@ class ApiClient {
     try {
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
     } catch (error) {
-      console.error('Error setting user:', error);
+      // Error setting user - silently fail
     }
   }
 
@@ -85,7 +83,7 @@ class ApiClient {
     try {
       await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
     } catch (error) {
-      console.error('Error clearing auth:', error);
+      // Error clearing auth - silently fail
     }
   }
 
@@ -257,7 +255,27 @@ class ApiClient {
   handleError(error) {
     if (error.response) {
       // Server responded with error
-      const message = error.response.data?.detail || error.response.data?.message || 'Server error';
+      const data = error.response.data;
+      let message = 'Server error';
+
+      // Extract error message from various response formats
+      if (typeof data === 'string') {
+        message = data;
+      } else if (data?.detail) {
+        // FastAPI validation errors return detail as array or object
+        if (Array.isArray(data.detail)) {
+          message = data.detail.map(err => err.msg || JSON.stringify(err)).join(', ');
+        } else if (typeof data.detail === 'object') {
+          message = JSON.stringify(data.detail);
+        } else {
+          message = String(data.detail);
+        }
+      } else if (data?.message) {
+        message = typeof data.message === 'object' ? JSON.stringify(data.message) : String(data.message);
+      } else if (data) {
+        message = JSON.stringify(data);
+      }
+
       return new Error(message);
     } else if (error.request) {
       // Request made but no response

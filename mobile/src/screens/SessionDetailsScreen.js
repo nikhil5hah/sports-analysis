@@ -8,13 +8,48 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import apiClient from '../api/client';
+import { formatDetailedDate, getDetailedDuration, formatSportName } from '../utils/formatters';
 
 export default function SessionDetailsScreen({ navigation, route }) {
   const { sessionId } = route.params;
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const getSportIcon = (sport, sessionType) => {
+    if (sessionType === 'training') return { type: 'emoji', value: '💪' };
+
+    switch(sport) {
+      case 'tennis':
+        return { type: 'emoji', value: '🎾' };
+      case 'table_tennis':
+        return { type: 'emoji', value: '🏓' };
+      case 'badminton':
+        return { type: 'emoji', value: '🏸' };
+      case 'squash':
+        return { type: 'image', value: require('../../assets/squash.jpeg') };
+      case 'padel':
+        return { type: 'emoji', value: '🎾' }; // Placeholder
+      default:
+        return { type: 'emoji', value: '🎾' };
+    }
+  };
+
+  const renderSportIcon = (sport, sessionType) => {
+    const icon = getSportIcon(sport, sessionType);
+    if (icon.type === 'image') {
+      return (
+        <Image
+          source={icon.value}
+          style={styles.sportIcon}
+          resizeMode="contain"
+        />
+      );
+    }
+    return <Text style={styles.sportEmoji}>{icon.value}</Text>;
+  };
 
   useEffect(() => {
     fetchSessionDetails();
@@ -25,40 +60,12 @@ export default function SessionDetailsScreen({ navigation, route }) {
       const data = await apiClient.getSession(sessionId);
       setSession(data);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      const errorMessage = error.message || 'Failed to load session details';
+      Alert.alert('Error', errorMessage);
       navigation.goBack();
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getDuration = (startTime, endTime) => {
-    if (!endTime) return 'In progress';
-
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const durationMs = end - start;
-    const minutes = Math.floor(durationMs / 60000);
-
-    if (minutes < 60) {
-      return `${minutes} minutes`;
-    }
-
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
   };
 
   const handleDelete = async () => {
@@ -72,7 +79,7 @@ export default function SessionDetailsScreen({ navigation, route }) {
         try {
           await apiClient.deleteSession(sessionId);
           alert('Session deleted successfully');
-          navigation.navigate('SessionList');
+          navigation.navigate('SessionListMain');
         } catch (error) {
           alert('Error: ' + error.message);
         }
@@ -95,7 +102,7 @@ export default function SessionDetailsScreen({ navigation, route }) {
                 Alert.alert('Success', 'Session deleted successfully', [
                   {
                     text: 'OK',
-                    onPress: () => navigation.navigate('SessionList'),
+                    onPress: () => navigation.navigate('SessionListMain'),
                   },
                 ]);
               } catch (error) {
@@ -129,13 +136,13 @@ export default function SessionDetailsScreen({ navigation, route }) {
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.headerCard}>
-          <Text style={styles.sportLabel}>{session.sport?.toUpperCase() || 'UNKNOWN'}</Text>
-          <Text style={styles.sessionType}>
-            {session.session_type === 'match' ? '🎯 Match' : '💪 Training Session'}
-          </Text>
-          {session.opponent_name && (
-            <Text style={styles.opponent}>vs {session.opponent_name}</Text>
-          )}
+          <Text style={styles.sportLabel}>{formatSportName(session.sport) || 'Unknown'}</Text>
+          <View style={styles.sessionTypeContainer}>
+            {renderSportIcon(session.sport, session.session_type)}
+            <Text style={styles.sessionType}>
+              {session.session_type === 'match' ? 'Match' : 'Training Session'}
+            </Text>
+          </View>
           <View style={styles.statusBadge}>
             <Text style={styles.statusText}>{session.status?.toUpperCase() || 'UNKNOWN'}</Text>
           </View>
@@ -147,35 +154,34 @@ export default function SessionDetailsScreen({ navigation, route }) {
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Started:</Text>
-            <Text style={styles.detailValue}>{formatDate(session.start_time)}</Text>
+            <Text style={styles.detailValue}>{formatDetailedDate(session.start_time)}</Text>
           </View>
 
           {session.end_time && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Ended:</Text>
-              <Text style={styles.detailValue}>{formatDate(session.end_time)}</Text>
+              <Text style={styles.detailValue}>{formatDetailedDate(session.end_time)}</Text>
             </View>
           )}
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Duration:</Text>
             <Text style={styles.detailValue}>
-              {getDuration(session.start_time, session.end_time)}
+              {getDetailedDuration(session.start_time, session.end_time)}
             </Text>
           </View>
-
-          {session.location && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Location:</Text>
-              <Text style={styles.detailValue}>📍 {session.location}</Text>
-            </View>
-          )}
 
           {session.session_type === 'match' && session.scoring_system && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Scoring:</Text>
               <Text style={styles.detailValue}>
-                {session.scoring_system === 'american' ? 'American (PARS)' : 'English'}
+                {session.scoring_system === 'par_11' ? 'PAR 11' :
+                 session.scoring_system === 'par_15' ? 'PAR 15' :
+                 session.scoring_system === 'par_21' ? 'PAR 21' :
+                 session.scoring_system === 'english' ? 'English' :
+                 session.scoring_system === 'regular' ? 'Regular' :
+                 session.scoring_system === 'tiebreak' ? 'Tie-Break' :
+                 session.scoring_system.toUpperCase()}
               </Text>
             </View>
           )}
@@ -254,6 +260,13 @@ export default function SessionDetailsScreen({ navigation, route }) {
         {/* Actions */}
         <View style={styles.actions}>
           <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>← Back to Sessions</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDelete}
           >
@@ -303,16 +316,25 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginBottom: 8,
   },
+  sessionTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   sessionType: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 8,
+    marginLeft: 8,
   },
-  opponent: {
-    fontSize: 18,
+  sportEmoji: {
+    fontSize: 24,
     color: '#fff',
-    marginBottom: 12,
+  },
+  sportIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
   },
   statusBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -381,12 +403,6 @@ const styles = StyleSheet.create({
     color: '#ddd',
     marginHorizontal: 20,
   },
-  letsText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 10,
-  },
   gameScoresSection: {
     marginTop: 20,
     paddingTop: 20,
@@ -449,6 +465,18 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: 10,
     marginBottom: 20,
+  },
+  backButton: {
+    backgroundColor: '#00D4AA',
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   deleteButton: {
     backgroundColor: '#dc3545',

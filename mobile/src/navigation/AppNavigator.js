@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import apiClient from '../api/client';
+
+// Import custom SVG icons
+import SessionsIcon from '../../assets/sessions.svg';
+import PlayIcon from '../../assets/play.svg';
+import StatsIcon from '../../assets/stats.svg';
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
@@ -15,6 +21,7 @@ import SessionDetailsScreen from '../screens/SessionDetailsScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
 export default function AppNavigator() {
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +40,7 @@ export default function AppNavigator() {
         setUser(currentUser);
       }
     } catch (error) {
-      console.error('Auth check error:', error);
+      // Auth check error - silently fail
     } finally {
       setIsLoading(false);
     }
@@ -62,112 +69,277 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: '#007AFF',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }}
-      >
-        {user ? (
-          // Main app screens (user is logged in)
-          <>
-            <Stack.Screen
-              name="Home"
-              options={{
+      {user ? (
+        // Main app with tabs (user is logged in)
+        <Tab.Navigator
+          initialRouteName="NewSession"
+          screenOptions={({ navigation, route }) => ({
+            headerStyle: {
+              backgroundColor: '#00B89C',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.logoutButton}
+              >
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            ),
+            tabBarStyle: {
+              backgroundColor: '#00B89C',
+              borderTopWidth: 0,
+              elevation: 0,
+              height: 90,
+              paddingBottom: 15,
+              paddingTop: 15,
+            },
+            tabBarActiveTintColor: '#fff',
+            tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.5)',
+            tabBarLabelStyle: {
+              fontSize: 13,
+              fontWeight: '600',
+              marginTop: 5,
+            },
+            tabBarIconStyle: {
+              marginTop: 5,
+            },
+          })}
+        >
+          <Tab.Screen
+            name="SessionList"
+            options={{
+              title: 'TRacket',
+              tabBarLabel: 'Sessions',
+              tabBarIcon: ({ color, size }) => (
+                <SessionsIcon width={40} height={40} fill={color} stroke={color} />
+              ),
+              // Hide tab header, let stack handle it
+              headerShown: false,
+            }}
+          >
+            {(props) => (
+              <Stack.Navigator
+                screenOptions={{
+                  headerShown: true,
+                  headerStyle: {
+                    backgroundColor: '#00B89C',
+                  },
+                  headerTintColor: '#fff',
+                  headerTitleStyle: {
+                    fontWeight: 'bold',
+                  },
+                  headerLeft: () => (
+                    <Image
+                      source={require('../../assets/logo.png')}
+                      style={styles.headerLogo}
+                      resizeMode="contain"
+                    />
+                  ),
+                  headerTitle: '',
+                  headerRight: () => (
+                    <TouchableOpacity
+                      onPress={handleLogout}
+                      style={styles.logoutButton}
+                    >
+                      <Text style={styles.logoutText}>Logout</Text>
+                    </TouchableOpacity>
+                  ),
+                }}
+              >
+                <Stack.Screen
+                  name="SessionListMain"
+                  component={SessionListScreen}
+                  options={{
+                    headerTitle: '',
+                  }}
+                />
+                <Stack.Screen
+                  name="SessionDetails"
+                  component={SessionDetailsScreen}
+                  options={{
+                    title: 'Session Details',
+                  }}
+                />
+              </Stack.Navigator>
+            )}
+          </Tab.Screen>
+
+          <Tab.Screen
+            name="NewSession"
+            options={({ route }) => {
+              const routeName = route.state
+                ? route.state.routes[route.state.index].name
+                : 'SessionCreateMain';
+
+              return {
                 title: 'TRacket',
-                headerBackVisible: false,
-              }}
-            >
-              {(props) => (
-                <HomeScreen
-                  {...props}
-                  user={user}
-                  onLogout={handleLogout}
-                />
-              )}
-            </Stack.Screen>
-
-            <Stack.Screen
-              name="SessionCreate"
-              component={SessionCreateScreen}
-              options={{
-                title: 'Create Session',
-              }}
-            />
-
-            <Stack.Screen
-              name="SessionList"
-              component={SessionListScreen}
-              options={{
-                title: 'My Sessions',
-              }}
-            />
-
-            <Stack.Screen
-              name="ActiveSession"
-              component={ActiveSessionScreen}
-              options={{
-                title: 'Active Session',
-                headerBackVisible: false,
-              }}
-            />
-
-            <Stack.Screen
-              name="SessionDetails"
-              component={SessionDetailsScreen}
-              options={{
-                title: 'Session Details',
-              }}
-            />
-
-            <Stack.Screen
-              name="Analytics"
-              component={AnalyticsScreen}
-              options={{
-                title: 'Analytics',
-              }}
-            />
-          </>
-        ) : (
-          // Auth screens (user is not logged in)
-          <>
-            <Stack.Screen
-              name="Login"
-              options={{
-                title: 'Login',
+                tabBarLabel: 'Play',
+                tabBarIcon: ({ color, size }) => (
+                  <PlayIcon width={44} height={44} fill={color} stroke={color} />
+                ),
+                // Completely hide header for this tab
                 headerShown: false,
-              }}
-            >
-              {(props) => (
-                <LoginScreen
-                  {...props}
-                  onLoginSuccess={handleLoginSuccess}
+                // Hide tab bar when on ActiveSession screen
+                tabBarStyle: routeName === 'ActiveSession'
+                  ? { display: 'none' }
+                  : {
+                      backgroundColor: '#00B89C',
+                      borderTopWidth: 0,
+                      elevation: 0,
+                      height: 90,
+                      paddingBottom: 15,
+                      paddingTop: 15,
+                    },
+              };
+            }}
+          >
+            {(props) => (
+              <Stack.Navigator
+                screenOptions={{
+                  headerShown: true,
+                  headerStyle: {
+                    backgroundColor: '#00B89C',
+                  },
+                  headerTintColor: '#fff',
+                  headerTitleStyle: {
+                    fontWeight: 'bold',
+                  },
+                  headerLeft: () => (
+                    <Image
+                      source={require('../../assets/logo.png')}
+                      style={styles.headerLogo}
+                      resizeMode="contain"
+                    />
+                  ),
+                  headerTitle: '',
+                  headerRight: () => (
+                    <TouchableOpacity
+                      onPress={handleLogout}
+                      style={styles.logoutButton}
+                    >
+                      <Text style={styles.logoutText}>Logout</Text>
+                    </TouchableOpacity>
+                  ),
+                }}
+              >
+                <Stack.Screen
+                  name="SessionCreateMain"
+                  component={SessionCreateScreen}
+                  options={{
+                    headerTitle: '',
+                  }}
                 />
-              )}
-            </Stack.Screen>
+                <Stack.Screen
+                  name="ActiveSession"
+                  component={ActiveSessionScreen}
+                  options={{
+                    title: 'Active Session',
+                    headerBackVisible: false,
+                  }}
+                />
+              </Stack.Navigator>
+            )}
+          </Tab.Screen>
 
-            <Stack.Screen
-              name="Register"
-              options={{
-                title: 'Create Account',
-                headerShown: true,
-              }}
-            >
-              {(props) => (
-                <RegisterScreen
-                  {...props}
-                  onRegisterSuccess={handleRegisterSuccess}
+          <Tab.Screen
+            name="Analytics"
+            options={{
+              title: 'TRacket',
+              tabBarLabel: 'Stats',
+              tabBarIcon: ({ color, size }) => (
+                <StatsIcon width={40} height={40} fill={color} stroke={color} />
+              ),
+              headerShown: false,
+            }}
+          >
+            {(props) => (
+              <Stack.Navigator
+                screenOptions={{
+                  headerShown: true,
+                  headerStyle: {
+                    backgroundColor: '#00B89C',
+                  },
+                  headerTintColor: '#fff',
+                  headerTitleStyle: {
+                    fontWeight: 'bold',
+                  },
+                  headerLeft: () => (
+                    <Image
+                      source={require('../../assets/logo.png')}
+                      style={styles.headerLogo}
+                      resizeMode="contain"
+                    />
+                  ),
+                  headerTitle: '',
+                  headerRight: () => (
+                    <TouchableOpacity
+                      onPress={handleLogout}
+                      style={styles.logoutButton}
+                    >
+                      <Text style={styles.logoutText}>Logout</Text>
+                    </TouchableOpacity>
+                  ),
+                }}
+              >
+                <Stack.Screen
+                  name="AnalyticsMain"
+                  component={AnalyticsScreen}
+                  options={{
+                    headerTitle: '',
+                  }}
                 />
-              )}
-            </Stack.Screen>
-          </>
-        )}
-      </Stack.Navigator>
+              </Stack.Navigator>
+            )}
+          </Tab.Screen>
+        </Tab.Navigator>
+      ) : (
+        // Auth screens (user is not logged in)
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: '#00B89C',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }}
+        >
+          <Stack.Screen
+            name="Login"
+            options={{
+              title: 'Login',
+              headerShown: false,
+            }}
+          >
+            {(props) => (
+              <LoginScreen
+                {...props}
+                onLoginSuccess={handleLoginSuccess}
+              />
+            )}
+          </Stack.Screen>
+
+          <Stack.Screen
+            name="Register"
+            options={{
+              title: 'Create Account',
+              headerShown: true,
+            }}
+          >
+            {(props) => (
+              <RegisterScreen
+                {...props}
+                onRegisterSuccess={handleRegisterSuccess}
+              />
+            )}
+          </Stack.Screen>
+        </Stack.Navigator>
+      )}
     </NavigationContainer>
   );
 }
@@ -178,5 +350,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
+  },
+  headerLogo: {
+    width: 300,
+    height: 90,
+    marginLeft: -100,
+    tintColor: '#fff',
+  },
+  logoutButton: {
+    marginRight: 15,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

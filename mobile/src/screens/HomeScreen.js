@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import apiClient from '../api/client';
+import { COLORS } from '../constants/colors';
 
 export default function HomeScreen({ user, onLogout, navigation }) {
   const handleLogout = async () => {
@@ -47,6 +48,14 @@ export default function HomeScreen({ user, onLogout, navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Logout Button - Top Right */}
+      <TouchableOpacity
+        style={styles.logoutButtonTop}
+        onPress={handleLogout}
+      >
+        <Text style={styles.logoutIconTop}>⏻</Text>
+      </TouchableOpacity>
+
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -97,30 +106,6 @@ export default function HomeScreen({ user, onLogout, navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>✨ Phase 4 & 5 Complete!</Text>
-          <Text style={styles.infoText}>
-            Score tracking and analytics are ready! Track points in real-time and analyze your performance with comprehensive stats.
-          </Text>
-        </View>
-
-        {/* Coming Soon */}
-        <View style={styles.comingSoonBox}>
-          <Text style={styles.comingSoonTitle}>Coming Next (Phase 3):</Text>
-          <Text style={styles.comingSoonItem}>• Pixel Watch 3 integration</Text>
-          <Text style={styles.comingSoonItem}>• Real-time heart rate tracking</Text>
-          <Text style={styles.comingSoonItem}>• Biometric data visualization</Text>
-          <Text style={styles.comingSoonItem}>• Player Mode (watch-controlled scoring)</Text>
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -129,7 +114,29 @@ export default function HomeScreen({ user, onLogout, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
+  },
+  logoutButtonTop: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  logoutIconTop: {
+    fontSize: 28,
+    color: COLORS.textWhite,
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
@@ -145,21 +152,15 @@ const styles = StyleSheet.create({
     height: 80,
     marginBottom: 20,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-  },
   welcomeText: {
     fontSize: 20,
-    color: '#333',
+    color: COLORS.textPrimary,
     fontWeight: '600',
     marginBottom: 8,
   },
   emailText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
   },
   actionsContainer: {
     marginBottom: 24,
@@ -169,19 +170,19 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 15,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   primaryCard: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.buttonSecondary,
   },
   secondaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: COLORS.buttonSecondary,
   },
   actionIcon: {
     fontSize: 48,
@@ -198,54 +199,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#fff',
     opacity: 0.9,
-  },
-  infoBox: {
-    backgroundColor: '#d4edda',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#c3e6cb',
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#155724',
-    marginBottom: 6,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#155724',
-  },
-  comingSoonBox: {
-    backgroundColor: '#fff3cd',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#ffc107',
-  },
-  comingSoonTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#856404',
-    marginBottom: 8,
-  },
-  comingSoonItem: {
-    fontSize: 12,
-    color: '#856404',
-    marginBottom: 4,
-    marginLeft: 8,
-  },
-  logoutButton: {
-    backgroundColor: '#dc3545',
-    borderRadius: 8,
-    padding: 15,
-    alignItems: 'center',
-  },
-  logoutButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

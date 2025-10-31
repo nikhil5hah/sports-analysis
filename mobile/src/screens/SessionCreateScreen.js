@@ -11,15 +11,28 @@ import {
   Platform,
 } from 'react-native';
 import apiClient from '../api/client';
+import { COLORS } from '../constants/colors';
 
 export default function SessionCreateScreen({ navigation }) {
   const [sessionType, setSessionType] = useState('match');
   const [sport, setSport] = useState('squash');
-  const [scoringSystem, setScoringSystem] = useState('american');
-  const [scoringMode, setScoringMode] = useState('referee'); // 'player' | 'referee'
-  const [opponentName, setOpponentName] = useState('');
-  const [location, setLocation] = useState('');
+  const [scoringSystem, setScoringSystem] = useState('par_11');
+  const [scoringMode, setScoringMode] = useState('player'); // 'player' | 'referee'
+  const [bestOfGames, setBestOfGames] = useState(1); // 1, 3, 5, or 7 (for table tennis)
   const [loading, setLoading] = useState(false);
+
+  // Update scoring system when sport changes
+  React.useEffect(() => {
+    if (sport === 'squash') {
+      setScoringSystem('par_11');
+    } else if (sport === 'badminton') {
+      setScoringSystem('par_15');
+    } else if (sport === 'table_tennis') {
+      setScoringSystem('par_11');
+    } else if (sport === 'tennis' || sport === 'padel') {
+      setScoringSystem('regular');
+    }
+  }, [sport]);
 
   const handleCreateSession = async () => {
     setLoading(true);
@@ -31,19 +44,14 @@ export default function SessionCreateScreen({ navigation }) {
         scoring_system: scoringSystem,
       };
 
-      // Add optional fields if provided
-      if (opponentName.trim()) {
-        sessionData.opponent_name = opponentName.trim();
-      }
-      if (location.trim()) {
-        sessionData.location = location.trim();
-      }
-
-      // Add scoring mode to metadata (for matches only)
+      // Add scoring mode and best-of-games to metadata (for matches only)
       if (sessionType === 'match') {
-        sessionData.metadata = JSON.stringify({
+        const metadata = {
           scoring_mode: scoringMode,
-        });
+          best_of_games: bestOfGames,
+        };
+
+        sessionData.metadata = JSON.stringify(metadata);
       }
 
       const session = await apiClient.createSession(sessionData);
@@ -53,9 +61,9 @@ export default function SessionCreateScreen({ navigation }) {
           'Session created successfully!\n\nClick OK to start the session now, or Cancel to view all sessions.'
         );
         if (choice) {
-          navigation.replace('ActiveSession', { session });
+          navigation.navigate('ActiveSession', { session });
         } else {
-          navigation.replace('SessionList');
+          navigation.navigate('SessionList');
         }
       } else {
         Alert.alert(
@@ -64,30 +72,32 @@ export default function SessionCreateScreen({ navigation }) {
           [
             {
               text: 'Start Session',
-              onPress: () => navigation.replace('ActiveSession', { session }),
+              onPress: () => navigation.navigate('ActiveSession', { session }),
             },
             {
               text: 'View Sessions',
-              onPress: () => navigation.replace('SessionList'),
+              onPress: () => navigation.navigate('SessionList'),
             },
           ]
         );
       }
     } catch (error) {
+      const errorMessage = error.message || 'Failed to create session. Please try again.';
       if (Platform.OS === 'web') {
-        alert('Error: ' + error.message);
+        alert('Error: ' + errorMessage);
       } else {
-        Alert.alert('Error', error.message);
+        Alert.alert('Error', errorMessage);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const OptionButton = ({ label, value, selectedValue, onPress }) => (
+  const OptionButton = ({ label, value, selectedValue, onPress, compact }) => (
     <TouchableOpacity
       style={[
         styles.optionButton,
+        compact && styles.optionButtonCompact,
         selectedValue === value && styles.optionButtonSelected,
       ]}
       onPress={onPress}
@@ -107,6 +117,14 @@ export default function SessionCreateScreen({ navigation }) {
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.header}>Create New Session</Text>
+
+        {/* Description */}
+        <View style={styles.descriptionBox}>
+          <Text style={styles.descriptionText}>
+            Start tracking your match or training session. Record scores in real-time,
+            track your performance metrics, and analyze your game after completion.
+          </Text>
+        </View>
 
         {/* Session Type */}
         <View style={styles.section}>
@@ -130,40 +148,41 @@ export default function SessionCreateScreen({ navigation }) {
         {/* Sport */}
         <View style={styles.section}>
           <Text style={styles.label}>Sport</Text>
-          <View style={styles.optionRow}>
+          <View style={styles.sportRow}>
             <OptionButton
               label="Squash"
               value="squash"
               selectedValue={sport}
               onPress={() => setSport('squash')}
+              compact
             />
             <OptionButton
               label="Tennis"
               value="tennis"
               selectedValue={sport}
               onPress={() => setSport('tennis')}
+              compact
             />
-          </View>
-          <View style={styles.optionRow}>
             <OptionButton
               label="Badminton"
               value="badminton"
               selectedValue={sport}
               onPress={() => setSport('badminton')}
+              compact
             />
             <OptionButton
               label="Table Tennis"
               value="table_tennis"
               selectedValue={sport}
               onPress={() => setSport('table_tennis')}
+              compact
             />
-          </View>
-          <View style={styles.optionRow}>
             <OptionButton
               label="Padel"
               value="padel"
               selectedValue={sport}
               onPress={() => setSport('padel')}
+              compact
             />
           </View>
         </View>
@@ -173,18 +192,105 @@ export default function SessionCreateScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.label}>Scoring System</Text>
             <View style={styles.optionRow}>
+              {sport === 'squash' && (
+                <>
+                  <OptionButton
+                    label="PAR 11"
+                    value="par_11"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('par_11')}
+                  />
+                  <OptionButton
+                    label="English"
+                    value="english"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('english')}
+                  />
+                </>
+              )}
+              {sport === 'badminton' && (
+                <>
+                  <OptionButton
+                    label="PAR 15"
+                    value="par_15"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('par_15')}
+                  />
+                  <OptionButton
+                    label="PAR 21"
+                    value="par_21"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('par_21')}
+                  />
+                </>
+              )}
+              {sport === 'table_tennis' && (
+                <>
+                  <OptionButton
+                    label="PAR 11"
+                    value="par_11"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('par_11')}
+                  />
+                  <OptionButton
+                    label="PAR 21"
+                    value="par_21"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('par_21')}
+                  />
+                </>
+              )}
+              {(sport === 'tennis' || sport === 'padel') && (
+                <>
+                  <OptionButton
+                    label="Regular"
+                    value="regular"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('regular')}
+                  />
+                  <OptionButton
+                    label="Tie-Break"
+                    value="tiebreak"
+                    selectedValue={scoringSystem}
+                    onPress={() => setScoringSystem('tiebreak')}
+                  />
+                </>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Best of Games (for all sports) */}
+        {sessionType === 'match' && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Match Format</Text>
+            <View style={styles.optionRow}>
               <OptionButton
-                label="American (PARS)"
-                value="american"
-                selectedValue={scoringSystem}
-                onPress={() => setScoringSystem('american')}
+                label="1 Game"
+                value={1}
+                selectedValue={bestOfGames}
+                onPress={() => setBestOfGames(1)}
               />
               <OptionButton
-                label="English"
-                value="english"
-                selectedValue={scoringSystem}
-                onPress={() => setScoringSystem('english')}
+                label="Best of 3"
+                value={3}
+                selectedValue={bestOfGames}
+                onPress={() => setBestOfGames(3)}
               />
+              <OptionButton
+                label="Best of 5"
+                value={5}
+                selectedValue={bestOfGames}
+                onPress={() => setBestOfGames(5)}
+              />
+              {sport === 'table_tennis' && (
+                <OptionButton
+                  label="Best of 7"
+                  value={7}
+                  selectedValue={bestOfGames}
+                  onPress={() => setBestOfGames(7)}
+                />
+              )}
             </View>
           </View>
         )}
@@ -193,99 +299,61 @@ export default function SessionCreateScreen({ navigation }) {
         {sessionType === 'match' && (
           <View style={styles.section}>
             <Text style={styles.label}>Scoring Mode</Text>
-            <Text style={styles.helperText}>
-              Choose how you'll track the score during the match
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.modeCard,
-                scoringMode === 'player' && styles.modeCardSelected,
-              ]}
-              onPress={() => setScoringMode('player')}
-            >
-              <View style={styles.modeHeader}>
-                <View style={[
-                  styles.radioOuter,
-                  scoringMode === 'player' && styles.radioOuterSelected,
-                ]}>
-                  {scoringMode === 'player' && <View style={styles.radioInner} />}
+            <View style={styles.modeRow}>
+              <TouchableOpacity
+                style={[
+                  styles.modeCard,
+                  scoringMode === 'player' && styles.modeCardSelected,
+                ]}
+                onPress={() => setScoringMode('player')}
+              >
+                <View style={styles.modeHeader}>
+                  <View style={[
+                    styles.radioOuter,
+                    scoringMode === 'player' && styles.radioOuterSelected,
+                  ]}>
+                    {scoringMode === 'player' && <View style={styles.radioInner} />}
+                  </View>
+                  <Text style={[
+                    styles.modeTitle,
+                    scoringMode === 'player' && styles.modeTitleSelected,
+                  ]}>
+                    Player
+                  </Text>
                 </View>
-                <Text style={[
-                  styles.modeTitle,
-                  scoringMode === 'player' && styles.modeTitleSelected,
-                ]}>
-                  Player Mode
+                <Text style={styles.modeDescription}>
+                  ⌚ Track with watch
                 </Text>
-              </View>
-              <Text style={styles.modeDescription}>
-                I'll wear the watch and track my own score hands-free during play
-              </Text>
-              <Text style={styles.modeNote}>
-                ⌚ Requires smartwatch (Apple Watch / Pixel Watch / Galaxy Watch)
-              </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.modeCard,
-                scoringMode === 'referee' && styles.modeCardSelected,
-              ]}
-              onPress={() => setScoringMode('referee')}
-            >
-              <View style={styles.modeHeader}>
-                <View style={[
-                  styles.radioOuter,
-                  scoringMode === 'referee' && styles.radioOuterSelected,
-                ]}>
-                  {scoringMode === 'referee' && <View style={styles.radioInner} />}
+              <TouchableOpacity
+                style={[
+                  styles.modeCard,
+                  scoringMode === 'referee' && styles.modeCardSelected,
+                ]}
+                onPress={() => setScoringMode('referee')}
+              >
+                <View style={styles.modeHeader}>
+                  <View style={[
+                    styles.radioOuter,
+                    scoringMode === 'referee' && styles.radioOuterSelected,
+                  ]}>
+                    {scoringMode === 'referee' && <View style={styles.radioInner} />}
+                  </View>
+                  <Text style={[
+                    styles.modeTitle,
+                    scoringMode === 'referee' && styles.modeTitleSelected,
+                  ]}>
+                    Referee
+                  </Text>
                 </View>
-                <Text style={[
-                  styles.modeTitle,
-                  scoringMode === 'referee' && styles.modeTitleSelected,
-                ]}>
-                  Referee Mode
+                <Text style={styles.modeDescription}>
+                  📱 Track with phone
                 </Text>
-              </View>
-              <Text style={styles.modeDescription}>
-                A referee or coach will track the score using this phone
-              </Text>
-              <Text style={styles.modeNote}>
-                📱 Best for competitive matches and coaching
-              </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
-
-        {/* Opponent Name (optional, only for matches) */}
-        {sessionType === 'match' && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Opponent Name (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter opponent's name"
-              placeholderTextColor="#999"
-              value={opponentName}
-              onChangeText={setOpponentName}
-              autoCapitalize="words"
-              editable={!loading}
-            />
-          </View>
-        )}
-
-        {/* Location (optional) */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Location (Optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter location"
-            placeholderTextColor="#999"
-            value={location}
-            onChangeText={setLocation}
-            autoCapitalize="words"
-            editable={!loading}
-          />
-        </View>
 
         {/* Create Button */}
         <TouchableOpacity
@@ -316,7 +384,7 @@ export default function SessionCreateScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   content: {
     padding: 20,
@@ -326,7 +394,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 30,
+    marginBottom: 20,
+  },
+  descriptionBox: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 25,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  descriptionText: {
+    fontSize: 15,
+    color: '#1565c0',
+    lineHeight: 22,
   },
   section: {
     marginBottom: 25,
@@ -343,11 +424,16 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     lineHeight: 20,
   },
+  modeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   modeCard: {
+    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
     borderWidth: 2,
     borderColor: '#ddd',
   },
@@ -358,15 +444,15 @@ const styles = StyleSheet.create({
   modeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 2,
     borderColor: '#ddd',
-    marginRight: 12,
+    marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -374,13 +460,13 @@ const styles = StyleSheet.create({
     borderColor: '#007AFF',
   },
   radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
     backgroundColor: '#007AFF',
   },
   modeTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -388,20 +474,19 @@ const styles = StyleSheet.create({
     color: '#007AFF',
   },
   modeDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  modeNote: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
+    lineHeight: 18,
   },
   optionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 10,
+  },
+  sportRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
   },
   optionButton: {
     backgroundColor: '#fff',
@@ -414,9 +499,14 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: 'center',
   },
+  optionButtonCompact: {
+    padding: 8,
+    minWidth: 70,
+    marginRight: 6,
+  },
   optionButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: COLORS.buttonPrimary,
+    borderColor: COLORS.buttonPrimary,
   },
   optionButtonText: {
     fontSize: 14,
@@ -436,19 +526,27 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   createButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: COLORS.buttonPrimary,
+    borderRadius: 12,
+    padding: 18,
     alignItems: 'center',
     marginTop: 10,
+    shadowColor: COLORS.buttonPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
   },
   createButtonDisabled: {
-    backgroundColor: '#99c7ff',
+    backgroundColor: COLORS.buttonDisabled,
+    opacity: 0.7,
   },
   createButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   cancelButton: {
     backgroundColor: '#fff',

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import apiClient from '../api/client';
 
@@ -25,6 +26,39 @@ export default function AnalyticsScreen({ navigation }) {
     winRate: 0,
   });
 
+  const getSportIcon = (sport, sessionType) => {
+    if (sessionType === 'training') return { type: 'emoji', value: '💪' };
+
+    switch(sport) {
+      case 'tennis':
+        return { type: 'emoji', value: '🎾' };
+      case 'table_tennis':
+        return { type: 'emoji', value: '🏓' };
+      case 'badminton':
+        return { type: 'emoji', value: '🏸' };
+      case 'squash':
+        return { type: 'image', value: require('../../assets/squash.jpeg') };
+      case 'padel':
+        return { type: 'emoji', value: '🎾' }; // Placeholder
+      default:
+        return { type: 'emoji', value: '🎾' };
+    }
+  };
+
+  const renderSportIcon = (sport, sessionType) => {
+    const icon = getSportIcon(sport, sessionType);
+    if (icon.type === 'image') {
+      return (
+        <Image
+          source={icon.value}
+          style={styles.sportIcon}
+          resizeMode="contain"
+        />
+      );
+    }
+    return <Text style={styles.sportEmoji}>{icon.value}</Text>;
+  };
+
   useEffect(() => {
     fetchAnalytics();
   }, []);
@@ -35,7 +69,7 @@ export default function AnalyticsScreen({ navigation }) {
       setSessions(data);
       calculateStats(data);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      // Error fetching analytics - silently fail for now
     } finally {
       setLoading(false);
     }
@@ -205,14 +239,11 @@ export default function AnalyticsScreen({ navigation }) {
           {sessions.slice(0, 5).map((session, index) => (
             <View key={session.session_id} style={styles.activityItem}>
               <View style={styles.activityIcon}>
-                <Text style={styles.activityIconText}>
-                  {session.session_type === 'match' ? '🎯' : '💪'}
-                </Text>
+                {renderSportIcon(session.sport, session.session_type)}
               </View>
               <View style={styles.activityDetails}>
                 <Text style={styles.activityTitle}>
                   {session.session_type === 'match' ? 'Match' : 'Training'}
-                  {session.opponent_name && ` vs ${session.opponent_name}`}
                 </Text>
                 <Text style={styles.activityDate}>
                   {new Date(session.start_time).toLocaleDateString('en-US', {
@@ -311,7 +342,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#00D4AA',
     marginBottom: 4,
   },
   statLabel: {
@@ -328,9 +359,9 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#f0f7ff',
+    backgroundColor: '#e0f7f4',
     borderWidth: 8,
-    borderColor: '#007AFF',
+    borderColor: '#00D4AA',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 20,
@@ -338,7 +369,7 @@ const styles = StyleSheet.create({
   winRateValue: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#00D4AA',
   },
   winRateLabel: {
     fontSize: 14,
@@ -382,7 +413,7 @@ const styles = StyleSheet.create({
   matchStatValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#00D4AA',
     marginBottom: 4,
   },
   matchStatLabel: {
@@ -429,6 +460,13 @@ const styles = StyleSheet.create({
   },
   activityIconText: {
     fontSize: 20,
+  },
+  sportEmoji: {
+    fontSize: 20,
+  },
+  sportIcon: {
+    width: 20,
+    height: 20,
   },
   activityDetails: {
     flex: 1,

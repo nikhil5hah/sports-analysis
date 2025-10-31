@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import apiClient from '../api/client';
+import { COLORS } from '../constants/colors';
 
 export default function RegisterScreen({ navigation, onRegisterSuccess }) {
   const [name, setName] = useState('');
@@ -85,7 +86,8 @@ export default function RegisterScreen({ navigation, onRegisterSuccess }) {
         ]
       );
     } catch (error) {
-      Alert.alert('Registration Failed', error.message);
+      const errorMessage = error.message || 'An error occurred during registration. Please try again.';
+      Alert.alert('Registration Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -189,7 +191,7 @@ export default function RegisterScreen({ navigation, onRegisterSuccess }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -208,27 +210,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.textSecondary,
   },
   form: {
     width: '100%',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 8,
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORS.border,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.buttonSecondary,
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#99c7ff',
   },
   buttonText: {
-    color: '#fff',
+    color: COLORS.textWhite,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -248,11 +250,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   loginText: {
-    color: '#666',
+    color: COLORS.textSecondary,
     fontSize: 14,
   },
   loginLink: {
-    color: '#007AFF',
+    color: COLORS.buttonSecondary,
     fontSize: 14,
     fontWeight: '600',
   },

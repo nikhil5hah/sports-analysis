@@ -7,24 +7,63 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import apiClient from '../api/client';
+import { formatDate, getSessionDuration, formatSportName } from '../utils/formatters';
 
 export default function SessionListScreen({ navigation }) {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
+  const getSportIcon = (sport, sessionType) => {
+    if (sessionType === 'training') return { type: 'emoji', value: '💪' };
+
+    switch(sport) {
+      case 'tennis':
+        return { type: 'emoji', value: '🎾' };
+      case 'table_tennis':
+        return { type: 'emoji', value: '🏓' };
+      case 'badminton':
+        return { type: 'emoji', value: '🏸' };
+      case 'squash':
+        return { type: 'image', value: require('../../assets/squash.jpeg') };
+      case 'padel':
+        return { type: 'emoji', value: '🎾' }; // Placeholder
+      default:
+        return { type: 'emoji', value: '🎾' };
+    }
+  };
+
+  const renderSportIcon = (sport, sessionType) => {
+    const icon = getSportIcon(sport, sessionType);
+    if (icon.type === 'image') {
+      return (
+        <Image
+          source={icon.value}
+          style={styles.sportIcon}
+          resizeMode="contain"
+        />
+      );
+    }
+    return <Text style={styles.sportEmoji}>{icon.value}</Text>;
+  };
+
+  // Reload sessions when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchSessions();
+    }, [])
+  );
 
   const fetchSessions = async () => {
     try {
       const data = await apiClient.getSessions();
       setSessions(data);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      // Error fetching sessions - silently fail for now
     } finally {
       setLoading(false);
     }
@@ -35,34 +74,6 @@ export default function SessionListScreen({ navigation }) {
     await fetchSessions();
     setRefreshing(false);
   }, []);
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const options = {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    return date.toLocaleDateString('en-US', options);
-  };
-
-  const getSessionDuration = (startTime, endTime) => {
-    if (!endTime) return 'In progress';
-
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const durationMs = end - start;
-    const minutes = Math.floor(durationMs / 60000);
-
-    if (minutes < 60) {
-      return `${minutes}m`;
-    }
-
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -81,8 +92,11 @@ export default function SessionListScreen({ navigation }) {
     <TouchableOpacity
       style={styles.sessionCard}
       onPress={() => {
-        if (item.status === 'active') {
-          navigation.navigate('ActiveSession', { session: item });
+        if (!item.end_time || item.end_time === null) {
+          navigation.navigate('NewSession', {
+            screen: 'ActiveSession',
+            params: { session: item },
+          });
         } else {
           navigation.navigate('SessionDetails', { sessionId: item.session_id });
         }
@@ -90,21 +104,18 @@ export default function SessionListScreen({ navigation }) {
     >
       <View style={styles.sessionHeader}>
         <View style={styles.sessionHeaderLeft}>
-          <Text style={styles.sessionSport}>{item.sport.toUpperCase()}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusText}>{item.status}</Text>
-          </View>
+          <Text style={styles.sessionSport}>{formatSportName(item.sport)}</Text>
         </View>
         <Text style={styles.sessionDate}>{formatDate(item.start_time)}</Text>
       </View>
 
       <View style={styles.sessionInfo}>
-        <Text style={styles.sessionType}>
-          {item.session_type === 'match' ? '🎯 Match' : '💪 Training'}
-        </Text>
-        {item.opponent_name && (
-          <Text style={styles.sessionOpponent}>vs {item.opponent_name}</Text>
-        )}
+        <View style={styles.sessionTypeContainer}>
+          {renderSportIcon(item.sport, item.session_type)}
+          <Text style={styles.sessionTypeText}>
+            {item.session_type === 'match' ? 'Match' : 'Training'}
+          </Text>
+        </View>
       </View>
 
       {item.session_type === 'match' && item.end_time && (item.final_score_me !== null || item.final_score_opponent !== null) && (
@@ -120,17 +131,19 @@ export default function SessionListScreen({ navigation }) {
         </View>
       )}
 
-      {item.location && (
-        <Text style={styles.sessionLocation}>📍 {item.location}</Text>
-      )}
-
       <View style={styles.sessionFooter}>
         <Text style={styles.sessionDuration}>
           {getSessionDuration(item.start_time, item.end_time)}
         </Text>
         {item.session_type === 'match' && item.scoring_system && (
           <Text style={styles.sessionScoring}>
-            {item.scoring_system === 'american' ? 'PARS' : 'English'}
+            {item.scoring_system === 'par_11' ? 'PAR 11' :
+             item.scoring_system === 'par_15' ? 'PAR 15' :
+             item.scoring_system === 'par_21' ? 'PAR 21' :
+             item.scoring_system === 'english' ? 'English' :
+             item.scoring_system === 'regular' ? 'Regular' :
+             item.scoring_system === 'tiebreak' ? 'Tie-Break' :
+             item.scoring_system.toUpperCase()}
           </Text>
         )}
       </View>
@@ -146,7 +159,7 @@ export default function SessionListScreen({ navigation }) {
       </Text>
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => navigation.navigate('SessionCreate')}
+        onPress={() => navigation.navigate('NewSession')}
       >
         <Text style={styles.createButtonText}>Create Session</Text>
       </TouchableOpacity>
@@ -167,7 +180,7 @@ export default function SessionListScreen({ navigation }) {
         <Text style={styles.headerTitle}>My Sessions</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('SessionCreate')}
+          onPress={() => navigation.navigate('NewSession', { screen: 'SessionCreateMain' })}
         >
           <Text style={styles.addButtonText}>+ New</Text>
         </TouchableOpacity>
@@ -210,15 +223,19 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ddd',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#00D4AA',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    shadowColor: '#00D4AA',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   addButtonText: {
     color: '#fff',
@@ -258,17 +275,6 @@ const styles = StyleSheet.create({
     color: '#333',
     marginRight: 10,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
   sessionDate: {
     fontSize: 12,
     color: '#999',
@@ -278,15 +284,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  sessionType: {
+  sessionTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sportEmoji: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  sportIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 6,
+  },
+  sessionTypeText: {
     fontSize: 16,
     color: '#333',
     fontWeight: '600',
-    marginRight: 10,
-  },
-  sessionOpponent: {
-    fontSize: 14,
-    color: '#666',
   },
   matchScoreContainer: {
     marginBottom: 8,
@@ -300,11 +314,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
-  },
-  sessionLocation: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
   },
   sessionFooter: {
     flexDirection: 'row',
@@ -346,14 +355,20 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   createButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    backgroundColor: '#00D4AA',
+    borderRadius: 12,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    shadowColor: '#00D4AA',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   createButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
 });

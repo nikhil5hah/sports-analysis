@@ -10,8 +10,10 @@ import {
   Platform,
   Alert,
   Image,
+  ImageBackground,
 } from 'react-native';
 import apiClient from '../api/client';
+import { COLORS } from '../constants/colors';
 
 export default function LoginScreen({ navigation, onLoginSuccess }) {
   const [email, setEmail] = useState('');
@@ -28,17 +30,15 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', email.trim());
       const { user } = await apiClient.login(email.trim(), password);
-      console.log('Login successful! User:', user);
 
       // Call success callback to update auth state
       if (onLoginSuccess) {
         onLoginSuccess(user);
       }
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Login Failed', error.message || 'An error occurred');
+      const errorMessage = error.message || 'An error occurred during login. Please try again.';
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -49,20 +49,28 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <ImageBackground
+      source={require('../../assets/wallpaper.jpg')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
     >
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.subtitle}>Track your performance</Text>
-        </View>
+      {/* Translucent Overlay */}
+      <View style={styles.overlay} />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.subtitle}>Track your performance</Text>
+          </View>
 
         {/* Login Form */}
         <View style={styles.form}>
@@ -125,15 +133,24 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
             <Text style={styles.testButtonText}>Use test account</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
     flex: 1,
@@ -141,88 +158,117 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   header: {
-    marginBottom: 50,
+    marginBottom: 60,
     alignItems: 'center',
   },
   logo: {
-    width: 200,
-    height: 80,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    width: 400,
+    height: 160,
+    marginBottom: 20,
+    tintColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    color: COLORS.textWhite,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
   form: {
     width: '100%',
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 15,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    color: COLORS.textPrimary,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: COLORS.buttonPrimary,
+    borderRadius: 12,
+    padding: 18,
     alignItems: 'center',
     marginTop: 10,
+    shadowColor: COLORS.buttonPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
   },
   buttonDisabled: {
-    backgroundColor: '#99c7ff',
+    backgroundColor: COLORS.buttonDisabled,
+    opacity: 0.7,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: COLORS.textWhite,
+    fontSize: 18,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    padding: 12,
+    borderRadius: 8,
   },
   registerText: {
-    color: '#666',
-    fontSize: 14,
+    color: COLORS.textWhite,
+    fontSize: 15,
   },
   registerLink: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
+    color: COLORS.buttonPrimary,
+    fontSize: 15,
+    fontWeight: 'bold',
   },
   testContainer: {
     marginTop: 40,
-    padding: 15,
-    backgroundColor: '#fff3cd',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffc107',
+    padding: 16,
+    backgroundColor: 'rgba(255, 193, 7, 0.15)',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 193, 7, 0.6)',
+    shadowColor: '#ffc107',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   testLabel: {
     fontSize: 14,
-    color: '#856404',
-    marginBottom: 8,
-    fontWeight: '600',
+    color: '#ffc107',
+    marginBottom: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   testButton: {
     backgroundColor: '#ffc107',
-    borderRadius: 6,
-    padding: 10,
+    borderRadius: 8,
+    padding: 12,
     alignItems: 'center',
+    shadowColor: '#ffc107',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
   },
   testButtonText: {
-    color: '#856404',
+    color: '#333',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
 });

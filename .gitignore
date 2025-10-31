@@ -78,3 +78,33 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+WHEN_YOU_GET_HOME.md
+*_IMPROVEMENT_PLAN.md
+
+# React Native / Expo
+mobile/node_modules/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/npm-debug.*
+mobile/yarn-error.log
+mobile/.pnp
+mobile/.pnp.js
+
+# Android Studio / Gradle (Wear OS)
+wear-app-project/.gradle/
+wear-app-project/.idea/
+wear-app-project/local.properties
+wear-app-project/build/
+wear-app-project/app/build/
+wear-app-project/*.iml
+wear-app-project/.DS_Store
+wear-app-project/captures/
+wear-app-project/.externalNativeBuild
+wear-app-project/.cxx
+
+# Assets (large binary files)
+# Keep assets folder structure but gitignore large images
+assets/*.png
+assets/*.jpg
+assets/*.jpeg
+!assets/README.md

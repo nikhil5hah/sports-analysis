@@ -1,8 +1,8 @@
 # 📊 Project Status - Sports Analytics Platform
 
-> **Last Updated**: October 30, 2024 (Afternoon Session - Phase 4)
-> **Current Phase**: Mobile App Development - Phase 4 Complete (Score Tracking)
-> **Next Session**: Phase 5 - Insights & Analytics / Documentation Updates
+> **Last Updated**: October 31, 2025 (Late Evening - Enhanced Watch/Phone Integration)
+> **Current Phase**: Phase 4 - Watch/Phone Integration Enhancements Complete
+> **Next Session**: Standalone Watch Sessions + Advanced Sensor Data
 
 ---
 
@@ -169,6 +169,154 @@ This dual approach provides professional-grade scoring flexibility while maintai
 
 **Testing**: Successfully tracked complete matches with multiple games, undo functionality, and proper score calculation
 
+### 8. Wear OS App - Phase 3 (Native Watch App) ✅ COMPLETE
+**Location**: `wear-app-project/`
+**Status**: Deployed and running on Pixel Watch 3
+**Technology**: Kotlin + Jetpack Compose for Wear OS
+
+**Features Built**:
+- ✅ Native Wear OS app for Pixel Watch 3
+- ✅ Real-time point tracking (ME/OPP/LET buttons)
+- ✅ Heart rate monitoring using Health Services API
+- ✅ Optimized UI for round watch faces
+- ✅ Score display (current game and total score)
+- ✅ Game management (Next Game button)
+- ✅ Undo functionality
+- ✅ Offline support with optimistic UI updates
+- ✅ Automatic sync with backend API
+- ✅ JWT authentication integration
+- ✅ Network security configuration for local development
+- ✅ Batch heart rate data upload (every 10 measurements)
+- ✅ **NEW**: Dynamic session selection (choose from active sessions)
+- ✅ **NEW**: Loads existing points when joining session
+- ✅ **NEW**: End session properly updates backend
+- ✅ **NEW**: Returns to session list after ending (not app close)
+
+**Architecture**:
+- **MVVM Pattern**: Clean separation of concerns
+- **Jetpack Compose**: Modern declarative UI
+- **Health Services API**: Native heart rate monitoring
+- **Retrofit + OkHttp**: Type-safe HTTP client
+- **Coroutines**: Async operations and flows
+- **SharedPreferences**: Session and token storage
+
+**Key Components**:
+- `MainActivity.kt` - App entry point with permission handling
+- `SessionListScreen.kt` - **NEW**: Dynamic session selection UI
+- `ScoreTrackingScreen.kt` - Main UI with score tracking logic
+- `ApiClient.kt` - Retrofit client with auth interceptor
+- `HealthServicesManager.kt` - Heart rate monitoring service
+- `Session.kt` - **UPDATED**: Fixed to match actual API response
+- `network_security_config.xml` - HTTP permissions for local dev
+
+**Integration Highlights**:
+1. **Authentication**: Uses same JWT tokens as mobile app
+2. **Session Management**: Connects to active sessions from mobile
+3. **Real-time Sync**: Points recorded on watch appear in backend
+4. **Heart Rate Data**: Continuous monitoring with automatic upload
+5. **Offline Capable**: Functions without network, syncs when available
+
+**Technical Challenges Solved**:
+- ✅ Network security policy (HTTP allowed for local development)
+- ✅ Health Services API integration and permissions
+- ✅ UI optimization for Pixel Watch 3's small round display
+- ✅ ADB wireless debugging setup for deployment
+- ✅ Field name mapping (data_points vs data for heart rate API)
+- ✅ JWT token injection and management
+
+**Mobile App Updates for Watch Integration**:
+- ✅ Session ID and token display on ActiveSessionScreen
+- ✅ Manual refresh button ("🔄 Refresh Points from Watch")
+- ✅ AsyncStorage token access for watch configuration
+- ✅ **NEW**: Auto-refresh points every 5 seconds (automatic watch sync)
+- ✅ **NEW**: Fixed session list navigation (active sessions go to ActiveSessionScreen)
+
+**Files Created**:
+```
+wear-app-project/
+├── app/
+│   ├── src/main/
+│   │   ├── java/com/tracket/wear/
+│   │   │   ├── models/
+│   │   │   │   ├── HeartRateData.kt
+│   │   │   │   └── PointData.kt
+│   │   │   ├── presentation/
+│   │   │   │   └── MainActivity.kt
+│   │   │   ├── services/
+│   │   │   │   ├── ApiClient.kt
+│   │   │   │   └── HealthServicesManager.kt
+│   │   │   ├── theme/
+│   │   │   │   └── TracketWatchTheme.kt
+│   │   │   └── ui/
+│   │   │       └── ScoreTrackingScreen.kt
+│   │   ├── res/xml/
+│   │   │   └── network_security_config.xml
+│   │   └── AndroidManifest.xml
+│   └── build.gradle.kts
+└── README.md
+```
+
+**Testing**: Successfully deployed to Pixel Watch 3, recorded points during live squash match, heart rate monitoring active, data syncing to backend
+
+**Known Limitations**:
+- ~~Manual session ID configuration required~~ ✅ **FIXED**: Dynamic session selection implemented
+- ~~Manual refresh required on phone app~~ ✅ **FIXED**: Auto-refresh every 5 seconds
+- Auth token expires after 24 hours (requires manual update) ⚠️ **TODO**: Implement token refresh
+
+**Documentation**:
+- ✅ Comprehensive `wear-app-project/README.md` with setup guide
+- ✅ Troubleshooting section for common issues
+- ✅ Architecture documentation
+- ✅ API endpoint documentation
+
+---
+
+### 🆕 Latest Improvements (Oct 31 Evening Session)
+
+**Watch App Enhancements**:
+1. ✅ **Dynamic Session Selection** - Watch now fetches and displays all active sessions from API
+   - No more hardcoded session IDs
+   - Tap to select which session to track
+   - Works for unlimited sessions
+   - File: `SessionListScreen.kt` (new)
+
+2. ✅ **Load Existing Points** - Watch loads current score when joining a session
+   - Session started on phone shows correct score on watch
+   - No more 0-0 mismatch
+   - Syncs score, opponent score, and game number
+   - File: `ScoreTrackingScreen.kt:59-73`
+
+3. ✅ **Proper Session End** - End button now updates backend
+   - Sends `end_time` to API
+   - Calculates and sends `total_games`
+   - Stops heart rate monitoring
+   - File: `ScoreTrackingScreen.kt:270-298`
+
+4. ✅ **Better Navigation** - End button returns to session list instead of closing app
+   - Can switch between sessions without restarting
+   - File: `MainActivity.kt:58`
+
+5. ✅ **Fixed Session Model** - Updated to match actual API response
+   - Changed `userId` from Int to String (UUID)
+   - Replaced `status` with `syncStatus`
+   - Fixed `isActive` logic to check `end_time`
+   - File: `Session.kt`
+
+**Mobile App Enhancements**:
+1. ✅ **Auto-refresh Points** - Phone automatically polls for new points every 5 seconds
+   - Watch points appear automatically on phone
+   - No manual refresh needed
+   - File: `ActiveSessionScreen.js:85-93`
+
+2. ✅ **Fixed Session Navigation** - Active sessions now route correctly
+   - Tapping active session goes to ActiveSessionScreen (not details)
+   - Uses `end_time` check instead of `status` field
+   - File: `SessionListScreen.js:95`
+
+**Cleanup**:
+- ✅ Removed 8 redundant documentation files
+- ✅ Consolidated watch setup docs into `wear-app-project/README.md`
+
 ---
 
 ## 🚧 In Progress / Next Steps
@@ -182,19 +330,19 @@ All session management features complete! Users can create, view, track, and end
 ### Phase 4: Score Tracking ✅ **COMPLETE**
 Full point-by-point score tracking with game management and final score calculation complete!
 
-### Phase 3: Smartwatch Integration (Week 4)
-**iOS - HealthKit**:
-- Install `react-native-health` library
-- Request permissions (HR, GPS, calories, steps)
-- Stream real-time heart rate
-- Buffer and batch upload to API
+### Phase 3: Smartwatch Integration ✅ **COMPLETE**
+**Wear OS Native App**:
+- ✅ Native Kotlin app for Pixel Watch 3
+- ✅ Real-time point tracking with optimized UI
+- ✅ Health Services API for heart rate monitoring
+- ✅ Offline support with automatic sync
+- ✅ JWT authentication integration
 
-**Android - Google Fit**:
-- Install `react-native-google-fit` library
-- Request same permissions
-- Implement same streaming logic
-
-**Reference**: `docs/MOBILE_APP_PLAN.md` - Phase 3 (detailed code examples)
+**Upcoming Enhancements**:
+- 🚧 Auto-refresh on mobile app (polling every 5s)
+- 🚧 Dynamic session selection on watch (fetch active sessions)
+- 🚧 Automatic token refresh mechanism
+- 🚧 Real-time WebSocket updates (replace polling)
 
 ### Phase 5: Insights & Analytics Dashboard (Week 5) 🚧 **NEXT**
 **Tasks**:
@@ -215,6 +363,16 @@ Full point-by-point score tracking with game management and final score calculat
 
 ```
 sports-analysis/
+├── wear-app-project/          # ✅ COMPLETE - Native Wear OS app
+│   ├── app/
+│   │   ├── src/main/java/com/tracket/wear/
+│   │   │   ├── models/
+│   │   │   ├── presentation/
+│   │   │   ├── services/
+│   │   │   ├── theme/
+│   │   │   └── ui/
+│   │   └── build.gradle.kts
+│   └── README.md
 ├── backend/                   # ✅ COMPLETE
 │   ├── app.py                # FastAPI server entry point
 │   ├── config.py             # Environment config
@@ -346,44 +504,41 @@ Will use:
 4. **No video integration** - Planned for future
 5. **No social features** - Planned for future
 
-### Critical Mobile App Issue (Unresolved)
-**Problem**: Android app fails to load on Pixel phone via Expo Go with error:
+### Critical Mobile App Issue ✅ **RESOLVED!**
+**Problem**: Android app failed to load on Pixel phone via Expo Go with error:
 ```
 java.lang.string cannot be cast to java.lang.Boolean
 ```
 
-**What We Tried**:
-1. ✅ Removed `newArchEnabled: true` from app.json
-2. ✅ Removed `edgeToEdgeEnabled: true` from app.json Android config
-3. ✅ Added Android package name to app.json
-4. ✅ Cleared Expo Go app data and cache on phone
-5. ✅ Reinstalled Expo Go app
-6. ✅ Ran `npx expo start --clear` to clear Metro bundler cache
-7. ✅ Deleted `.expo` and `node_modules/.cache` directories
-8. ✅ Removed all `cursor: 'pointer'` CSS properties from StyleSheets (web-only property)
-9. ✅ Restarted Expo server multiple times
-10. ✅ Integrated Logo.png image to replace text branding
-11. ✅ Updated app branding from "Tracket" to "TRacket"
+**Root Cause Found**: Boolean/string type mismatch in ActiveSessionScreen.js
+- Line 77 was sending `is_let: isLet ? 'true' : 'false'` (strings) instead of `is_let: isLet` (boolean)
+- Android's Java runtime threw a type casting error when receiving string "true"/"false" instead of boolean true/false
+
+**Solution Applied** (October 30, 2024):
+1. ✅ **Fixed the type mismatch**: Changed `is_let: isLet ? 'true' : 'false'` to `is_let: isLet` in `/mobile/src/screens/ActiveSessionScreen.js:77`
+2. ✅ **Fixed version mismatch**: Downgraded `react-native-screens` from 4.18.0 to ~4.16.0
+3. ✅ **Reset Expo Go app**: Cleared app data and cache on Pixel phone
+4. ✅ **Restarted Expo server**: Used `npx expo start --clear`
 
 **Current Status**:
-- ❌ Error persists on Android (Pixel phone)
+- ✅ **Android app now works on Pixel phone via Expo Go!**
 - ✅ Web version works correctly at http://localhost:8081
-- Backend running at http://192.168.1.35:8000
+- ✅ Backend running at http://192.168.1.35:8000
 
-**Next Steps to Try**:
-1. Check for other web-specific CSS properties in StyleSheets (userSelect, WebkitOverflowScrolling, etc.)
-2. Examine exact error stack trace in Expo server output
-3. Consider downgrading `react-native-screens` from 4.18.0 to ~4.16.0 (version mismatch warning)
-4. Try creating minimal test app to isolate the issue
-5. Check if issue is specific to Expo Go vs development build
+**Previous Troubleshooting Attempts** (11 attempts before finding the solution):
+1. Removed `newArchEnabled: true` from app.json
+2. Removed `edgeToEdgeEnabled: true` from app.json Android config
+3. Added Android package name to app.json
+4. Cleared Expo Go app data and cache on phone
+5. Reinstalled Expo Go app
+6. Ran `npx expo start --clear` to clear Metro bundler cache
+7. Deleted `.expo` and `node_modules/.cache` directories
+8. Removed all `cursor: 'pointer'` CSS properties from StyleSheets
+9. Restarted Expo server multiple times
+10. Integrated Logo.png image to replace text branding
+11. Updated app branding from "Tracket" to "TRacket"
 
-**Files Modified During Troubleshooting**:
-- `/mobile/app.json` - Removed problematic configs
-- `/mobile/src/screens/*.js` - Removed cursor: 'pointer' styles
-- `/mobile/assets/logo.png` - Added logo image
-- `/mobile/src/screens/LoginScreen.js` - Added logo, removed text branding
-- `/mobile/src/screens/HomeScreen.js` - Added logo, removed text branding
-- `/mobile/src/screens/RegisterScreen.js` - Updated branding text
+**Key Lesson**: When debugging Android type casting errors, check API payloads for string/boolean mismatches, not just configuration and CSS properties.
 
 ### Troubleshooting Guide
 
@@ -545,35 +700,32 @@ When you say "read PROJECT_STATUS.md", Claude will understand:
 
 ## 📝 Last Session Summary
 
-**Date**: October 30, 2024 (Evening Session - Android Expo Go Troubleshooting + Branding Update)
+**Date**: October 30, 2024 (Evening Session - ANDROID ISSUE RESOLVED! 🎉)
 
-**Attempted**:
-- ❌ Fix persistent Android Expo Go error: "java.lang.string cannot be cast to java.lang.Boolean"
-  - Removed problematic app.json configs (newArchEnabled, edgeToEdgeEnabled)
-  - Cleared all caches (Expo Go, Metro bundler, .expo, node_modules/.cache)
-  - Removed web-specific CSS property `cursor: 'pointer'` from all screen files
-  - Multiple attempts with different approaches - error persists
-- ✅ Integrated Logo.png into mobile app:
-  - Copied Logo.png to mobile/assets/logo.png
-  - Updated LoginScreen to display logo instead of "TRacket" text
-  - Updated HomeScreen to display logo instead of "TRacket" text
-  - Added proper Image components with 200x80 sizing
-- ✅ Updated app branding from "Tracket" to "TRacket" (capital R):
-  - Updated all screen titles and navigation
-  - Updated RegisterScreen subtitle
+**Accomplished**:
+- ✅ **FIXED Android Expo Go error**: "java.lang.string cannot be cast to java.lang.Boolean"
+  - **Root cause identified**: Boolean/string type mismatch in ActiveSessionScreen.js line 77
+  - Changed `is_let: isLet ? 'true' : 'false'` to `is_let: isLet`
+  - Fixed version mismatch: Downgraded react-native-screens from 4.18.0 to ~4.16.0
+  - Cleared Expo Go app data and Metro bundler cache
+  - **Result**: App now loads successfully on Android Pixel phone!
+- ✅ Backend API verified running at http://192.168.1.35:8000
+- ✅ All mobile app phases (1, 2, 4) now working on Android
 
-**Time Spent**: ~2 hours (troubleshooting Android issue)
+**Time Spent**: ~3 hours (12 troubleshooting attempts total across sessions)
 
 **Current Status**:
-- ❌ Android/Pixel testing blocked by persistent boolean casting error
+- ✅ **Android Pixel phone working via Expo Go!** ✨
 - ✅ Web version working correctly at http://localhost:8081
 - ✅ Backend running at http://192.168.1.35:8000
 - ✅ Logo integration complete
-- ✅ Branding updated
+- ✅ Branding updated to TRacket
+- ✅ Mobile app fully functional on both web and Android!
 
 **Next Session Goal**:
-1. **Priority 1**: Resolve Android Expo Go issue (check for more web-specific CSS properties, examine stack trace, try development build instead of Expo Go)
-2. **Priority 2**: Once mobile works - Phase 5 (Analytics Dashboard) OR Phase 3 (Smartwatch Integration)
+1. **Priority 1**: Phase 3 (Smartwatch Integration) - Connect Pixel Watch 3 for biometric data
+2. **Priority 2**: Phase 5 enhancements - Advanced analytics and visualizations
+3. **Priority 3**: Testing full end-to-end workflow (session → scoring → biometrics)
 
 **Previous Sessions**:
 - **October 30 (Afternoon)**: Phase 4 - Score Tracking complete

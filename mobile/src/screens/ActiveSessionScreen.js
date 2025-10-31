@@ -8,18 +8,46 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../api/client';
+import { formatTime, formatSportName } from '../utils/formatters';
+import {
+  getTennisGameScore,
+  isGameWon,
+  isSetWon,
+  isTiebreaker,
+  isTiebreakWon,
+  isMatchWon,
+  formatSetScores,
+} from '../utils/tennisScoring';
 
 export default function ActiveSessionScreen({ navigation, route }) {
   const { session } = route.params;
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [authToken, setAuthToken] = useState('');
+
+  // Parse metadata
+  const metadata = session.metadata ? JSON.parse(session.metadata) : {};
+  const isTennisRegular = (session.sport === 'tennis' || session.sport === 'padel') && session.scoring_system === 'regular';
+  const bestOfGames = metadata.best_of_games || 1;
 
   // Score tracking state (for matches only)
   const [scoreMe, setScoreMe] = useState(0);
   const [scoreOpponent, setScoreOpponent] = useState(0);
   const [gameNumber, setGameNumber] = useState(1);
   const [points, setPoints] = useState([]);
+
+  // Tennis-specific state
+  const [tennisGamePointsMe, setTennisGamePointsMe] = useState(0);
+  const [tennisGamePointsOpponent, setTennisGamePointsOpponent] = useState(0);
+  const [tennisGamesMe, setTennisGamesMe] = useState(0);
+  const [tennisGamesOpponent, setTennisGamesOpponent] = useState(0);
+  const [tennisSetScores, setTennisSetScores] = useState([]); // Array of {me: X, opponent: Y}
+  const [tennisCurrentSet, setTennisCurrentSet] = useState(1);
+  const [tennisInTiebreak, setTennisInTiebreak] = useState(false);
+  const [tennisTiebreakPointsMe, setTennisTiebreakPointsMe] = useState(0);
+  const [tennisTiebreakPointsOpponent, setTennisTiebreakPointsOpponent] = useState(0);
 
   useEffect(() => {
     // Calculate initial elapsed time
@@ -45,6 +73,26 @@ export default function ActiveSessionScreen({ navigation, route }) {
     }
   }, []);
 
+  // Load auth token for watch app
+  useEffect(() => {
+    const loadToken = async () => {
+      const token = await AsyncStorage.getItem('@squash_analytics_token');
+      setAuthToken(token || 'No token found');
+    };
+    loadToken();
+  }, []);
+
+  // Auto-refresh points every 5 seconds (for watch sync)
+  useEffect(() => {
+    if (session.session_type === 'match') {
+      const refreshInterval = setInterval(() => {
+        loadPoints();
+      }, 5000); // Poll every 5 seconds
+
+      return () => clearInterval(refreshInterval);
+    }
+  }, [session.session_type]);
+
   const loadPoints = async () => {
     try {
       const existingPoints = await apiClient.getPoints(session.session_id);
@@ -58,7 +106,7 @@ export default function ActiveSessionScreen({ navigation, route }) {
         setGameNumber(lastPoint.game_number);
       }
     } catch (error) {
-      console.error('Error loading points:', error);
+      // Error loading points - silently fail for now
     }
   };
 
@@ -74,7 +122,7 @@ export default function ActiveSessionScreen({ navigation, route }) {
         score_me_after: newScoreMe,
         score_opponent_after: newScoreOpponent,
         game_number: gameNumber,
-        is_let: isLet ? 'true' : 'false',
+        is_let: isLet ? "true" : "false",
       };
 
       const newPoint = await apiClient.recordPoint(session.session_id, pointData);
@@ -82,10 +130,119 @@ export default function ActiveSessionScreen({ navigation, route }) {
       setScoreMe(newScoreMe);
       setScoreOpponent(newScoreOpponent);
     } catch (error) {
-      if (Platform.OS === 'web') {
-        alert('Error recording point: ' + error.message);
+      let errorMessage = 'Failed to record point.';
+
+      if (error && error.message) {
+        // If message is an object, convert it to string
+        if (typeof error.message === 'object') {
+          try {
+            errorMessage = JSON.stringify(error.message);
+          } catch (e) {
+            errorMessage = 'Error: Could not parse error details';
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       } else {
-        Alert.alert('Error', error.message);
+        errorMessage = 'Unknown error occurred';
+      }
+
+      if (Platform.OS === 'web') {
+        alert('Error recording point: ' + errorMessage);
+      } else {
+        Alert.alert('Error Recording Point', errorMessage);
+      }
+    }
+  };
+
+  const recordTennisPoint = (winner) => {
+    if (tennisInTiebreak) {
+      // Handle tiebreaker point
+      const newPointsMe = winner === 'me' ? tennisTiebreakPointsMe + 1 : tennisTiebreakPointsMe;
+      const newPointsOpponent = winner === 'opponent' ? tennisTiebreakPointsOpponent + 1 : tennisTiebreakPointsOpponent;
+
+      setTennisTiebreakPointsMe(newPointsMe);
+      setTennisTiebreakPointsOpponent(newPointsOpponent);
+
+      // Check if tiebreaker is won
+      const tiebreakWinner = isTiebreakWon(newPointsMe, newPointsOpponent);
+      if (tiebreakWinner) {
+        // Tiebreak set score is 7-6
+        const newGamesMe = tiebreakWinner === 'me' ? 7 : 6;
+        const newGamesOpponent = tiebreakWinner === 'opponent' ? 7 : 6;
+
+        // Add completed set
+        const newSetScores = [...tennisSetScores, { me: newGamesMe, opponent: newGamesOpponent }];
+        setTennisSetScores(newSetScores);
+
+        // Check if match is won
+        const setsMe = newSetScores.filter(s => s.me > s.opponent).length;
+        const setsOpponent = newSetScores.filter(s => s.opponent > s.me).length;
+        const matchWinner = isMatchWon(setsMe, setsOpponent, bestOfGames);
+
+        if (matchWinner) {
+          Alert.alert('Match Won!', `${matchWinner === 'me' ? 'You' : 'Opponent'} won the match!`);
+        } else {
+          // Start next set
+          setTennisCurrentSet(tennisCurrentSet + 1);
+          setTennisGamesMe(0);
+          setTennisGamesOpponent(0);
+          setTennisInTiebreak(false);
+          setTennisTiebreakPointsMe(0);
+          setTennisTiebreakPointsOpponent(0);
+          setTennisGamePointsMe(0);
+          setTennisGamePointsOpponent(0);
+        }
+      }
+    } else {
+      // Handle regular game point
+      const newPointsMe = winner === 'me' ? tennisGamePointsMe + 1 : tennisGamePointsMe;
+      const newPointsOpponent = winner === 'opponent' ? tennisGamePointsOpponent + 1 : tennisGamePointsOpponent;
+
+      setTennisGamePointsMe(newPointsMe);
+      setTennisGamePointsOpponent(newPointsOpponent);
+
+      // Check if game is won
+      const gameWinner = isGameWon(newPointsMe, newPointsOpponent);
+      if (gameWinner) {
+        const newGamesMe = gameWinner === 'me' ? tennisGamesMe + 1 : tennisGamesMe;
+        const newGamesOpponent = gameWinner === 'opponent' ? tennisGamesOpponent + 1 : tennisGamesOpponent;
+
+        setTennisGamesMe(newGamesMe);
+        setTennisGamesOpponent(newGamesOpponent);
+        setTennisGamePointsMe(0);
+        setTennisGamePointsOpponent(0);
+
+        // Check for tiebreaker
+        if (isTiebreaker(newGamesMe, newGamesOpponent)) {
+          setTennisInTiebreak(true);
+          setTennisTiebreakPointsMe(0);
+          setTennisTiebreakPointsOpponent(0);
+        } else {
+          // Check if set is won
+          const setWinner = isSetWon(newGamesMe, newGamesOpponent);
+          if (setWinner) {
+            // Add completed set
+            const newSetScores = [...tennisSetScores, { me: newGamesMe, opponent: newGamesOpponent }];
+            setTennisSetScores(newSetScores);
+
+            // Check if match is won
+            const setsMe = newSetScores.filter(s => s.me > s.opponent).length;
+            const setsOpponent = newSetScores.filter(s => s.opponent > s.me).length;
+            const matchWinner = isMatchWon(setsMe, setsOpponent, bestOfGames);
+
+            if (matchWinner) {
+              Alert.alert('Match Won!', `${matchWinner === 'me' ? 'You' : 'Opponent'} won the match!`);
+            } else {
+              // Start next set
+              setTennisCurrentSet(tennisCurrentSet + 1);
+              setTennisGamesMe(0);
+              setTennisGamesOpponent(0);
+            }
+          }
+        }
       }
     }
   };
@@ -117,10 +274,11 @@ export default function ActiveSessionScreen({ navigation, route }) {
         setGameNumber(1);
       }
     } catch (error) {
+      const errorMessage = error.message || error.toString() || 'Failed to undo point';
       if (Platform.OS === 'web') {
-        alert('Error undoing point: ' + error.message);
+        alert('Error undoing point: ' + errorMessage);
       } else {
-        Alert.alert('Error', error.message);
+        Alert.alert('Error', errorMessage);
       }
     }
   };
@@ -155,17 +313,6 @@ export default function ActiveSessionScreen({ navigation, route }) {
         ]
       );
     }
-  };
-
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    return `${minutes}:${String(secs).padStart(2, '0')}`;
   };
 
   const handlePauseResume = () => {
@@ -245,12 +392,18 @@ export default function ActiveSessionScreen({ navigation, route }) {
           const viewDetails = window.confirm(
             'Session ended successfully!\n\nClick OK to view details, or Cancel to view all sessions.'
           );
+
+          // Navigate to parent tab navigator first
+          const parentNav = navigation.getParent();
           if (viewDetails) {
-            navigation.replace('SessionDetails', {
-              sessionId: session.session_id,
+            parentNav.navigate('SessionList', {
+              screen: 'SessionDetails',
+              params: { sessionId: session.session_id },
             });
           } else {
-            navigation.replace('SessionList');
+            parentNav.navigate('SessionList', {
+              screen: 'SessionListMain',
+            });
           }
         } catch (error) {
           alert('Error: ' + error.message);
@@ -294,14 +447,22 @@ export default function ActiveSessionScreen({ navigation, route }) {
                   [
                     {
                       text: 'View Details',
-                      onPress: () =>
-                        navigation.replace('SessionDetails', {
-                          sessionId: session.session_id,
-                        }),
+                      onPress: () => {
+                        const parentNav = navigation.getParent();
+                        parentNav.navigate('SessionList', {
+                          screen: 'SessionDetails',
+                          params: { sessionId: session.session_id },
+                        });
+                      },
                     },
                     {
                       text: 'View Sessions',
-                      onPress: () => navigation.replace('SessionList'),
+                      onPress: () => {
+                        const parentNav = navigation.getParent();
+                        parentNav.navigate('SessionList', {
+                          screen: 'SessionListMain',
+                        });
+                      },
                     },
                   ]
                 );
@@ -320,16 +481,16 @@ export default function ActiveSessionScreen({ navigation, route }) {
       <View style={styles.content}>
         {/* Session Info */}
         <View style={styles.infoCard}>
-          <Text style={styles.sportLabel}>{session.sport.toUpperCase()}</Text>
+          <Text style={styles.sportLabel}>{formatSportName(session.sport)}</Text>
           <Text style={styles.sessionType}>
             {session.session_type === 'match' ? 'Match' : 'Training Session'}
           </Text>
-          {session.opponent_name && (
-            <Text style={styles.opponent}>vs {session.opponent_name}</Text>
-          )}
-          {session.location && (
-            <Text style={styles.location}>📍 {session.location}</Text>
-          )}
+          <Text style={styles.sessionId} selectable={true}>
+            ID: {session.session_id}
+          </Text>
+          <Text style={styles.authToken} selectable={true}>
+            Token: {authToken}
+          </Text>
         </View>
 
         {/* Timer */}
@@ -342,6 +503,14 @@ export default function ActiveSessionScreen({ navigation, route }) {
             </Text>
           </View>
         </View>
+
+        {/* Refresh Button */}
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={loadPoints}
+        >
+          <Text style={styles.refreshButtonText}>🔄 Refresh Points from Watch</Text>
+        </TouchableOpacity>
 
         {/* Stats */}
         <View style={styles.statsCard}>
@@ -370,7 +539,7 @@ export default function ActiveSessionScreen({ navigation, route }) {
         </View>
 
         {/* Score Tracking (Matches Only) */}
-        {session.session_type === 'match' && (
+        {session.session_type === 'match' && !isTennisRegular && (
           <View style={styles.scoreCard}>
             <Text style={styles.scoreTitle}>Score - Game {gameNumber}</Text>
 
@@ -435,6 +604,67 @@ export default function ActiveSessionScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Tennis/Padel Score Tracking */}
+        {session.session_type === 'match' && isTennisRegular && (
+          <View style={styles.scoreCard}>
+            <Text style={styles.scoreTitle}>
+              Set {tennisCurrentSet} {tennisInTiebreak ? '- Tiebreaker' : `- Game ${tennisGamesMe + tennisGamesOpponent + 1}`}
+            </Text>
+
+            {/* Set Scores */}
+            {tennisSetScores.length > 0 && (
+              <View style={styles.tennisSetScoresContainer}>
+                <Text style={styles.tennisSetScoresLabel}>Completed Sets:</Text>
+                <Text style={styles.tennisSetScoresText}>{formatSetScores(tennisSetScores)}</Text>
+              </View>
+            )}
+
+            {/* Current Set Games */}
+            <View style={styles.tennisCurrentSetContainer}>
+              <Text style={styles.tennisCurrentSetLabel}>Current Set:</Text>
+              <Text style={styles.tennisCurrentSetScore}>{tennisGamesMe} - {tennisGamesOpponent}</Text>
+            </View>
+
+            {/* Current Game/Tiebreak Score */}
+            <View style={styles.tennisGameScoreContainer}>
+              <Text style={styles.tennisGameScoreLabel}>
+                {tennisInTiebreak ? 'Tiebreak Score:' : 'Current Game:'}
+              </Text>
+              <View style={styles.tennisGameScoreDisplay}>
+                {tennisInTiebreak ? (
+                  <>
+                    <Text style={styles.tennisGameScore}>{tennisTiebreakPointsMe} - {tennisTiebreakPointsOpponent}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.tennisGameScore}>
+                      {getTennisGameScore(tennisGamePointsMe, tennisGamePointsOpponent).me} - {getTennisGameScore(tennisGamePointsMe, tennisGamePointsOpponent).opponent}
+                    </Text>
+                  </>
+                )}
+              </View>
+            </View>
+
+            {/* Point Recording Buttons */}
+            <Text style={styles.pointButtonsLabel}>Record Point:</Text>
+            <View style={styles.pointButtonsRow}>
+              <TouchableOpacity
+                style={[styles.pointButton, styles.pointButtonMe]}
+                onPress={() => recordTennisPoint('me')}
+              >
+                <Text style={styles.pointButtonText}>Me</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.pointButton, styles.pointButtonOpponent]}
+                onPress={() => recordTennisPoint('opponent')}
+              >
+                <Text style={styles.pointButtonText}>Opponent</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Action Buttons */}
         <View style={styles.actions}>
           <TouchableOpacity
@@ -452,17 +682,6 @@ export default function ActiveSessionScreen({ navigation, route }) {
           >
             <Text style={styles.actionButtonText}>⏹️ End Session</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>💡 Coming Soon</Text>
-          <Text style={styles.infoText}>
-            • Real-time heart rate tracking{'\n'}
-            • Score tracking for matches{'\n'}
-            • GPS tracking{'\n'}
-            • Performance insights
-          </Text>
         </View>
       </View>
     </ScrollView>
@@ -496,14 +715,32 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
   },
-  opponent: {
-    fontSize: 18,
+  sessionId: {
+    fontSize: 11,
     color: '#666',
-    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
-  location: {
-    fontSize: 14,
+  authToken: {
+    fontSize: 9,
     color: '#999',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 4,
+  },
+  refreshButton: {
+    backgroundColor: '#28A745',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   timerCard: {
     backgroundColor: '#007AFF',
@@ -597,24 +834,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  infoBox: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#90caf9',
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1976d2',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1565c0',
-    lineHeight: 22,
   },
   scoreCard: {
     backgroundColor: '#fff',
@@ -713,5 +932,58 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Tennis-specific styles
+  tennisSetScoresContainer: {
+    backgroundColor: '#f8f8f8',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  tennisSetScoresLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 4,
+  },
+  tennisSetScoresText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  tennisCurrentSetContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    marginBottom: 15,
+  },
+  tennisCurrentSetLabel: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '600',
+  },
+  tennisCurrentSetScore: {
+    fontSize: 24,
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  tennisGameScoreContainer: {
+    marginBottom: 20,
+  },
+  tennisGameScoreLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  tennisGameScoreDisplay: {
+    alignItems: 'center',
+  },
+  tennisGameScore: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#007AFF',
   },
 });
